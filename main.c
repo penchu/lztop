@@ -6,35 +6,38 @@
 #define token_number 11
 #define token_size 10
 
+float cpu_usage_calc(void);
+
 unsigned long* read_cpu_snapshot(void);
 
 int main(void) {
 
+    printf("CPU usage is: %.2f%%\n", cpu_usage_calc());
+
+    return 0;
+}
+
+float cpu_usage_calc(void) {
     unsigned long* cpu_snapshot = read_cpu_snapshot();
     
     unsigned long stored_cpu_snapshot[100] = {0};
 
     for (int i = 0; cpu_snapshot[i] != '\0'; i++) {
-        stored_cpu_snapshot[i] = cpu_snapshot[i];
+        stored_cpu_snapshot[i] = cpu_snapshot[i];        
     }
     sleep(1);
     cpu_snapshot = read_cpu_snapshot();
 
-    unsigned long total_active;
-    unsigned long total_active_curr;
-    unsigned long total_active_prev;
-    unsigned long total_idle;
+    unsigned long total_active = 0;
+    unsigned long total_idle = 0;
     for (int i = 0; i <= 3; i++) {
-        // total_active_curr += cpu_snapshot[i];
-        // total_active_prev += stored_cpu_snapshot[i];
         total_active += (cpu_snapshot[i] - stored_cpu_snapshot[i]);
     }
     total_idle = (cpu_snapshot[3] - stored_cpu_snapshot[3]);
 
     float cpu_usage = (((double)total_active - (double)total_idle)/(double)total_active)*100;
-    printf("CPU usage is: %.2f%%\n", cpu_usage);
-
-    return 0;
+    
+    return cpu_usage;
 }
 
 unsigned long* read_cpu_snapshot(void) {
