@@ -7,12 +7,16 @@
 #define token_size 10
 
 float cpu_usage_calc(void);
-
 unsigned long* read_cpu_snapshot(void);
+// unsigned long* read_meminfo(void);
+void read_meminfo(void);
 
 int main(void) {
 
-    printf("CPU usage is: %.2f%%\n", cpu_usage_calc());
+    float cpu_usage = cpu_usage_calc();
+    printf("CPU usage is: %.2f%%\n", cpu_usage);
+
+    read_meminfo();
 
     return 0;
 }
@@ -36,7 +40,7 @@ float cpu_usage_calc(void) {
     total_idle = (cpu_snapshot[3] - stored_cpu_snapshot[3]);
 
     float cpu_usage = (((double)total_active - (double)total_idle)/(double)total_active)*100;
-    
+
     return cpu_usage;
 }
 
@@ -48,11 +52,6 @@ unsigned long* read_cpu_snapshot(void) {
     fgets(buff, buff_size, fptr);
     buff[strcspn(buff, "\n")] = '\0';
     fclose(fptr);
-
-    // #define token_number 11
-    // #define token_size 10
-    // const size_t token_number = 11;
-    // const size_t token_size = 10;
 
     char token[token_number][token_size];
     int n = 0;
@@ -73,4 +72,84 @@ unsigned long* read_cpu_snapshot(void) {
     }
 
     return token_int;
+}
+
+// unsigned long* read_meminfo(void)
+void read_meminfo(void) {
+    FILE *fptr;
+    fptr = fopen("/proc/meminfo", "r");
+    size_t buff_size = 128;    
+    char buff[buff_size];
+    char token[token_number][token_size*3] = {0};
+    char token_new[token_number];
+    int n = 0;
+    int m = 0;
+    unsigned long MemTotal = 0;
+    unsigned long MemAvailable = 0;
+
+    while (fgets(buff, buff_size, fptr) != NULL) {
+        buff[strcspn(buff, "\n")] = '\0';
+        if (strstr(buff, "MemTotal")) {
+            strcpy(token[n++], buff);
+        }
+        else if (strstr(buff, "MemAvailable")) {
+            strcpy(token[n++], buff);
+        }
+        if (n == 2) break;
+    }
+    fclose(fptr);
+
+    for (int i = 0; i < n; i++) {
+        char *myPtr = strtok(token[i], " \t");        
+        while(myPtr != NULL) {
+            printf("%s\n", myPtr);
+            myPtr = strtok(NULL, " \t");
+        }
+    }
+
+    for (int i = 0; token[i][0] != '\0'; i++) {
+        printf("token[%d] is %s\n", i, token[i]);
+    }
+
+    // for (int i = 0; i < n; i++) {
+    //     for (int j = 0; token[i][j] != '\0'; j++) {
+    //         char *myPtr = strtok(token[i], " ");
+    //         while(myPtr != NULL) {
+    //             myPtr = strtok(NULL, " ");
+    //         }
+    //         // printf("token[%d][%d] is %c\n", i, j, token[i][j]);
+    //     }
+    //     printf("token[%d] is %s\n", i, token[i]);
+    // }
+
+    // for (int i = 0; token[i] != NULL; i++) {
+    //     printf("%s ", token[i+1]);
+    //     if (strcmp(token[i], "MemTotal:") == 0) MemTotal = strtoul(token[i+1], NULL, 10);
+    //     else if (strcmp(token[i], "MemAvailable:") == 0) {
+    //         MemAvailable = strtoul(token[i+1], NULL, 10);
+    //         break;
+    //     }
+    // }
+
+    // for (int i = 0; token[i] != NULL; i++) {
+    //     if (strstr(token[i], "MemTotal")) MemTotal = strtoul(token[i+1], NULL, 10);
+    //     else if (strstr(token[i], "MemAvailable")) MemAvailable = strtoul(token[i+1], NULL, 10);
+    // } 
+
+    // printf("%ld, %ld\n", MemAvailable, MemTotal);
+
+
+    // for (int i = 0; i < n; i++) {
+    //     for (int j = 0; token[i][j] != '\0'; j++) {
+    //         printf("%c", token[i][j]);
+    //         while (token[i][j] == ' ') {
+    //             j++;
+    //         }
+    //         token_new[m] == token[i][j];
+    //     }
+    //     printf("\n");
+    // }
+    // printf("\n");
+
+
 }
