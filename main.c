@@ -1,22 +1,24 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include<unistd.h>
+#include <unistd.h>
+#include <ctype.h>
 
 #define token_number 11
 #define token_size 10
 
 float cpu_usage_calc(void);
 unsigned long* read_cpu_snapshot(void);
-// unsigned long* read_meminfo(void);
-void read_meminfo(void);
+float read_meminfo(void);
+// void read_meminfo(void);
 
 int main(void) {
 
     float cpu_usage = cpu_usage_calc();
     printf("CPU usage is: %.2f%%\n", cpu_usage);
 
-    read_meminfo();
+    float mem_usage = read_meminfo();
+    printf("Memory usage is: %.2f%%\n", mem_usage);
 
     return 0;
 }
@@ -74,8 +76,8 @@ unsigned long* read_cpu_snapshot(void) {
     return token_int;
 }
 
-// unsigned long* read_meminfo(void)
-void read_meminfo(void) {
+float read_meminfo(void) {
+// void read_meminfo(void) {
     FILE *fptr;
     fptr = fopen("/proc/meminfo", "r");
     size_t buff_size = 128;    
@@ -86,70 +88,37 @@ void read_meminfo(void) {
     int m = 0;
     unsigned long MemTotal = 0;
     unsigned long MemAvailable = 0;
+    float MemUsage = 0; 
+    char *p = NULL;
 
     while (fgets(buff, buff_size, fptr) != NULL) {
         buff[strcspn(buff, "\n")] = '\0';
         if (strstr(buff, "MemTotal")) {
-            strcpy(token[n++], buff);
+            p = buff;
+            for (int i = 0; buff[i] != '\0'; i++) {
+                if (isdigit(buff[i])) {                
+                    MemTotal = strtol(p + i, NULL, 10);
+                    break;
+                }
+            }
+            n++;                       
         }
-        else if (strstr(buff, "MemAvailable")) {
-            strcpy(token[n++], buff);
+        if (strstr(buff, "MemAvailable")) {
+            p = buff;
+            for (int i = 0; buff[i] != '\0'; i++) {
+                if (isdigit(buff[i])) {                    
+                    MemAvailable = strtol(p + i, NULL, 10);
+                    break;
+                }
+            }
+            n++;                       
         }
         if (n == 2) break;
     }
     fclose(fptr);
 
-    for (int i = 0; i < n; i++) {
-        char *myPtr = strtok(token[i], " \t");        
-        while(myPtr != NULL) {
-            printf("%s\n", myPtr);
-            myPtr = strtok(NULL, " \t");
-        }
-    }
-
-    for (int i = 0; token[i][0] != '\0'; i++) {
-        printf("token[%d] is %s\n", i, token[i]);
-    }
-
-    // for (int i = 0; i < n; i++) {
-    //     for (int j = 0; token[i][j] != '\0'; j++) {
-    //         char *myPtr = strtok(token[i], " ");
-    //         while(myPtr != NULL) {
-    //             myPtr = strtok(NULL, " ");
-    //         }
-    //         // printf("token[%d][%d] is %c\n", i, j, token[i][j]);
-    //     }
-    //     printf("token[%d] is %s\n", i, token[i]);
-    // }
-
-    // for (int i = 0; token[i] != NULL; i++) {
-    //     printf("%s ", token[i+1]);
-    //     if (strcmp(token[i], "MemTotal:") == 0) MemTotal = strtoul(token[i+1], NULL, 10);
-    //     else if (strcmp(token[i], "MemAvailable:") == 0) {
-    //         MemAvailable = strtoul(token[i+1], NULL, 10);
-    //         break;
-    //     }
-    // }
-
-    // for (int i = 0; token[i] != NULL; i++) {
-    //     if (strstr(token[i], "MemTotal")) MemTotal = strtoul(token[i+1], NULL, 10);
-    //     else if (strstr(token[i], "MemAvailable")) MemAvailable = strtoul(token[i+1], NULL, 10);
-    // } 
-
-    // printf("%ld, %ld\n", MemAvailable, MemTotal);
+    return MemUsage = (((double)MemTotal - (double)MemAvailable)/(double)MemTotal)*100;
 
 
-    // for (int i = 0; i < n; i++) {
-    //     for (int j = 0; token[i][j] != '\0'; j++) {
-    //         printf("%c", token[i][j]);
-    //         while (token[i][j] == ' ') {
-    //             j++;
-    //         }
-    //         token_new[m] == token[i][j];
-    //     }
-    //     printf("\n");
-    // }
-    // printf("\n");
-
-
+    // printf("%ld, %ld \n", MemTotal, MemAvailable);
 }
