@@ -9,16 +9,17 @@
 
 float cpu_usage_calc(void);
 unsigned long* read_cpu_snapshot(void);
-float read_meminfo(void);
-// void read_meminfo(void);
+void read_meminfo(void);
+void readable_values(void);
 
 int main(void) {
 
     float cpu_usage = cpu_usage_calc();
     printf("CPU usage is: %.2f%%\n", cpu_usage);
 
-    float mem_usage = read_meminfo();
-    printf("Memory usage is: %.2f%%\n", mem_usage);
+    read_meminfo();
+
+    readable_values();
 
     return 0;
 }
@@ -76,8 +77,7 @@ unsigned long* read_cpu_snapshot(void) {
     return token_int;
 }
 
-float read_meminfo(void) {
-// void read_meminfo(void) {
+void read_meminfo(void) {
     FILE *fptr;
     fptr = fopen("/proc/meminfo", "r");
     size_t buff_size = 128;    
@@ -117,8 +117,23 @@ float read_meminfo(void) {
     }
     fclose(fptr);
 
-    return MemUsage = (((double)MemTotal - (double)MemAvailable)/(double)MemTotal)*100;
+    MemUsage = (((double)MemTotal - (double)MemAvailable)/(double)MemTotal)*100;
 
+    printf("Memory usage is: %ld/%ld %.2f%%\n", MemTotal - MemAvailable, MemTotal, MemUsage);
 
-    // printf("%ld, %ld \n", MemTotal, MemAvailable);
+}
+
+void readable_values(void) {
+    int value = 6000;
+    // int remainder = value;
+    int count = 0;
+
+    while (value >= 1024) {
+        value -= 1024;
+        count++;  
+    }
+    // remainder = value;
+
+    printf("%d, %d\n", count, value);
+
 }
