@@ -10,7 +10,7 @@
 float cpu_usage_calc(void);
 unsigned long* read_cpu_snapshot(void);
 void read_meminfo(void);
-char* readable_values(unsigned long value);
+char* readable_values(unsigned long long value);
 
 int main(void) {
 
@@ -19,7 +19,7 @@ int main(void) {
 
     read_meminfo();
 
-    // readable_values(6000);
+    readable_values(6054420);
 
     return 0;
 }
@@ -88,6 +88,7 @@ void read_meminfo(void) {
     int m = 0;
     unsigned long MemTotal = 0;
     unsigned long MemAvailable = 0;
+    unsigned long MemUsed = 0;
     float MemUsage = 0; 
     char *p = NULL;
 
@@ -118,30 +119,29 @@ void read_meminfo(void) {
     fclose(fptr);
 
     MemUsage = (((double)MemTotal - (double)MemAvailable)/(double)MemTotal)*100;
+    MemUsed = MemTotal - MemAvailable;
 
-    printf("Memory usage is: %ld/%s %.2f%%\n", MemTotal - MemAvailable, readable_values(MemTotal), MemUsage);
+    printf("Memory usage is: %s/%s %.2f%%\n", readable_values(MemUsed), readable_values(MemTotal), MemUsage);
 
 }
 
-char* readable_values(unsigned long value) {
-    // int value = 6000;
+char* readable_values(unsigned long long value) {
+    value *= 1024; 
     int count = 0;
-    unsigned long unit_inc = 0;
+    float unit_inc = value;
 
     char units[4][3] = {"B", "KB", "MB", "GB"};
 
-    while (value >= 1024) {
-        unit_inc = value/1024;
-        value = value % 1024;
+    while (unit_inc >= 1024) { 
+        unit_inc = unit_inc/1024.0;
         units[count++];
     }
-    value = (value*100)/1024;
+
+    // printf("%.2f %s\n", unit_inc, units[count]);
 
     static char convertion[50];
 
-    sprintf(convertion, "%ld, %ld, %s", value, unit_inc, units[count]);
+    sprintf(convertion, "%.2f%s", unit_inc, units[count]);        
+
     return convertion;
-
-    // printf("%.2f,%.2f %s\n", unit_inc, value, units[count]);
-
 }
