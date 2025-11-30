@@ -121,27 +121,32 @@ void read_meminfo(void) {
     MemUsage = (((double)MemTotal - (double)MemAvailable)/(double)MemTotal)*100;
     MemUsed = MemTotal - MemAvailable;
 
-    printf("Memory usage is: %s/%s %.2f%%\n", readable_values(MemUsed), readable_values(MemTotal), MemUsage);
+    char MemUsed_conv[50]; 
+    char MemTotal_conv[50]; 
+    strcpy(MemUsed_conv, readable_values(MemUsed));
+    strcpy(MemTotal_conv, readable_values(MemTotal));
 
+    printf("Memory usage is: %s/%s %.2f%%\n", MemUsed_conv, MemTotal_conv, MemUsage);
 }
 
 char* readable_values(unsigned long long value) {
     value *= 1024; 
     int count = 0;
     float unit_inc = value;
-
+       
     char units[4][3] = {"B", "KB", "MB", "GB"};
+
+    // printf("%.2f %s %lld\n", unit_inc, units[count], value);
 
     while (unit_inc >= 1024) { 
         unit_inc = unit_inc/1024.0;
         units[count++];
     }
 
-    // printf("%.2f %s\n", unit_inc, units[count]);
-
+    // printf("%.2f %s\n", unit_inc, units[count]);    
     static char convertion[50];
-
-    sprintf(convertion, "%.2f%s", unit_inc, units[count]);        
+    memset(convertion, 0, sizeof(convertion));
+    sprintf(convertion, "%.2f%s", unit_inc, units[count]);          
 
     return convertion;
 }
