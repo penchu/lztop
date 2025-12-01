@@ -7,10 +7,15 @@
 #define token_number 11
 #define token_size 10
 
+// typedef struct {
+//     float conv;
+//     char *unit_conv;
+// } ValConv;
+
 float cpu_usage_calc(void);
 unsigned long* read_cpu_snapshot(void);
 void read_meminfo(void);
-char* readable_values(unsigned long long value);
+float readable_values(unsigned long long value, char **unit);
 
 int main(void) {
 
@@ -19,7 +24,7 @@ int main(void) {
 
     read_meminfo();
 
-    readable_values(6054420);
+    // readable_values(6054420);
 
     return 0;
 }
@@ -121,32 +126,37 @@ void read_meminfo(void) {
     MemUsage = (((double)MemTotal - (double)MemAvailable)/(double)MemTotal)*100;
     MemUsed = MemTotal - MemAvailable;
 
-    char MemUsed_conv[50]; 
-    char MemTotal_conv[50]; 
-    strcpy(MemUsed_conv, readable_values(MemUsed));
-    strcpy(MemTotal_conv, readable_values(MemTotal));
+    char *MemTotal_unit;
+    char *MemUsed_unit;   
 
-    printf("Memory usage is: %s/%s %.2f%%\n", MemUsed_conv, MemTotal_conv, MemUsage);
+    float test = readable_values(MemUsed, &MemUsed_unit);
+    printf("%.2f %s\n", test, MemUsed_unit);
+    // printf("%.2f %s\n", readable_values(MemUsed, &MemUsed_unit), MemUsed_unit);
+
+    // printf("Memory usage is: %.2f %s/%.2f %s %.2f%%\n", readable_values(MemUsed, &MemUsed_unit), MemUsed_unit, readable_values(MemTotal, &MemTotal_unit), MemTotal_unit, MemUsage); 
+    // char MemUsed_conv[50]; 
+    // char MemTotal_conv[50]; 
+    // strcpy(MemUsed_conv, readable_values(MemUsed));
+    // strcpy(MemTotal_conv, readable_values(MemTotal));
+    // printf("Memory usage is: %s/%s %.2f%%\n", MemUsed_conv, MemTotal_conv, MemUsage);
 }
 
-char* readable_values(unsigned long long value) {
+float readable_values(unsigned long long value, char **unit) {
     value *= 1024; 
     int count = 0;
     float unit_inc = value;
        
-    char units[4][3] = {"B", "KB", "MB", "GB"};
-
-    // printf("%.2f %s %lld\n", unit_inc, units[count], value);
+    static char units[4][3] = {"B", "KB", "MB", "GB"};
 
     while (unit_inc >= 1024) { 
         unit_inc = unit_inc/1024.0;
         units[count++];
     }
+    *unit = units[count];
+    // printf("%.2f %s\n", unit_inc, *unit);    
+    // static char convertion[50];
+    // memset(convertion, 0, sizeof(convertion));
+    // sprintf(convertion, "%.2f%s", unit_inc, units[count]);          
 
-    // printf("%.2f %s\n", unit_inc, units[count]);    
-    static char convertion[50];
-    memset(convertion, 0, sizeof(convertion));
-    sprintf(convertion, "%.2f%s", unit_inc, units[count]);          
-
-    return convertion;
+    return unit_inc;
 }
