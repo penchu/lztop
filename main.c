@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <sys/statvfs.h>
 
 #define token_number 11
 #define token_size 10
@@ -12,10 +13,18 @@ typedef struct {
     char *unit_conv;
 } ValConv;
 
+// typedef struct {
+//     unsigned long total;
+//     unsigned long free;
+//     double usage;
+// } DiskUsage;
+
 float cpu_usage_calc(void);
 unsigned long* read_cpu_snapshot(void);
 void read_meminfo(void);
-ValConv readable_values(unsigned long long value);
+ValConv readable_values(unsigned long value);
+void disk_usage(void);
+int disk_usage_calc(char *path);
 
 int main(void) {
 
@@ -24,7 +33,7 @@ int main(void) {
 
     read_meminfo();
 
-    // readable_values(6054420);
+    disk_usage();
 
     return 0;
 }
@@ -132,7 +141,7 @@ void read_meminfo(void) {
     printf("Memory usage is: %.2f%s/%.2f%s %.2f%%\n", struct_used.conv_val, struct_used.unit_conv, struct_total.conv_val, struct_total.unit_conv, MemUsage); 
 }
 
-ValConv readable_values(unsigned long long value) {
+ValConv readable_values(unsigned long value) {
     value *= 1024; 
     ValConv s1;
     int count = 0;
@@ -143,8 +152,46 @@ ValConv readable_values(unsigned long long value) {
     while (s1.conv_val >= 1024) { 
         s1.conv_val = s1.conv_val/1024.0;
         units[count++];
-    }
+    }   
     s1.unit_conv = units[count];
 
     return s1;
+}
+
+void disk_usage(void) {
+    disk_usage_calc("/");
+    disk_usage_calc("/mnt/sdb1");
+}
+
+int disk_usage_calc(char *path) {
+    struct statvfs stat;  
+
+    if (statvfs(path, &stat) !=0) {
+        return -1;
+    } 
+
+    double usage;
+    unsigned long free;
+    unsigned long total;
+    unsigned long used;
+
+    if (strcmp(path, "/") == 0) {
+        free = stat.f_bfree*stat.f_frsize;
+    }
+    else {
+        free = stat.f_bavail*stat.f_frsize;
+    }
+    total = stat.f_blocks*stat.f_frsize;
+    used = total - free;
+    usage = ((double)used/(double)total)*100;
+
+    // printf("%ld\n", total);    
+
+    ValConv struct_used = readable_values(used);
+    ValConv struct_total = readable_values(total);
+    printf("%.2f %s\n", struct_total.conv_val, struct_total.unit_conv);
+    
+    // printf("%s  %.2f%s/%.2f%s %.2f%%\n", path, struct_used.conv_val, struct_used.unit_conv, struct_total.conv_val, struct_total.unit_conv, usage);
+
+    return 0;
 }
