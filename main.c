@@ -185,13 +185,11 @@ int disk_usage_calc(char *path) {
     used = total - free;
     usage = ((double)used/(double)total)*100;
 
-    // printf("%ld\n", total);    
 
-    ValConv struct_used = readable_values(used);
-    ValConv struct_total = readable_values(total);
-    printf("%.2f %s\n", struct_total.conv_val, struct_total.unit_conv);
+    ValConv struct_used = readable_values(used/1024);
+    ValConv struct_total = readable_values(total/1024);
     
-    // printf("%s  %.2f%s/%.2f%s %.2f%%\n", path, struct_used.conv_val, struct_used.unit_conv, struct_total.conv_val, struct_total.unit_conv, usage);
+    printf("%s  %.2f%s/%.2f%s %.2f%%\n", path, struct_used.conv_val, struct_used.unit_conv, struct_total.conv_val, struct_total.unit_conv, usage);
 
     return 0;
 }
