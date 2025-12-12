@@ -13,32 +13,25 @@ typedef struct {
     char *unit_conv;
 } ValConv;
 
-// typedef struct {
-//     unsigned long total;
-//     unsigned long free;
-//     double usage;
-// } DiskUsage;
-
-float cpu_usage_calc(void);
+void cpu_usage_calc(void);
 unsigned long* read_cpu_snapshot(void);
 void read_meminfo(void);
 ValConv readable_values(unsigned long value);
 void disk_usage(void);
 int disk_usage_calc(char *path);
+void network_stats(void);
 
 int main(void) {
 
-    float cpu_usage = cpu_usage_calc();
-    printf("CPU usage is: %.2f%%\n", cpu_usage);
-
+    cpu_usage_calc();
     read_meminfo();
-
     disk_usage();
+    network_stats();
 
     return 0;
 }
 
-float cpu_usage_calc(void) {
+void cpu_usage_calc(void) {
     unsigned long* cpu_snapshot = read_cpu_snapshot();
     
     unsigned long stored_cpu_snapshot[100] = {0};
@@ -58,7 +51,7 @@ float cpu_usage_calc(void) {
 
     float cpu_usage = (((double)total_active - (double)total_idle)/(double)total_active)*100;
 
-    return cpu_usage;
+    printf("CPU usage is: %.2f%%\n", cpu_usage);
 }
 
 unsigned long* read_cpu_snapshot(void) {
@@ -107,7 +100,7 @@ void read_meminfo(void) {
     char *p = NULL;
 
     while (fgets(buff, buff_size, fptr) != NULL) {
-        buff[strcspn(buff, "\n")] = '\0';
+        // buff[strcspn(buff, "\n")] = '\0';
         if (strstr(buff, "MemTotal")) {
             p = buff;
             for (int i = 0; buff[i] != '\0'; i++) {
@@ -135,14 +128,14 @@ void read_meminfo(void) {
     MemUsage = (((double)MemTotal - (double)MemAvailable)/(double)MemTotal)*100;
     MemUsed = MemTotal - MemAvailable;
 
-    ValConv struct_used = readable_values(MemUsed);
-    ValConv struct_total = readable_values(MemTotal);
+    ValConv struct_used = readable_values(MemUsed*1024);
+    ValConv struct_total = readable_values(MemTotal*1024);
 
     printf("Memory usage is: %.2f%s/%.2f%s %.2f%%\n", struct_used.conv_val, struct_used.unit_conv, struct_total.conv_val, struct_total.unit_conv, MemUsage); 
 }
 
 ValConv readable_values(unsigned long value) {
-    value *= 1024; 
+    // value *= 1024; 
     ValConv s1;
     int count = 0;
     s1.conv_val = value;
@@ -192,4 +185,55 @@ int disk_usage_calc(char *path) {
     printf("%s  %.2f%s/%.2f%s %.2f%%\n", path, struct_used.conv_val, struct_used.unit_conv, struct_total.conv_val, struct_total.unit_conv, usage);
 
     return 0;
+}
+
+void network_stats(void) {
+    char p[250];
+    int n = 0;
+    unsigned long rx_bytes;
+    unsigned long rx_packets;
+    unsigned long rx_errs;
+    unsigned long tx_bytes;
+    unsigned long tx_packets;
+    unsigned long tx_errs;    
+
+    FILE *fptr;
+    fptr = fopen("/proc/net/dev", "r");
+    size_t buff_size = 128;    
+    char buff[buff_size];
+
+    while (fgets(buff, buff_size, fptr) != NULL) {
+        if (strstr(buff, "enp5s0")) {
+            for (int i = 8; buff[i] != '\0'; i++) {
+                p[n++] = buff[i];
+            }             
+        }
+    }
+
+    // printf("%s\n", p);
+    
+    int i = 0;
+    long token[20];
+    char *myPtr = strtok(p, " ");
+    while (myPtr != NULL) {
+        if (myPtr != 0) {
+            token[i++] = strtol(myPtr, NULL, 10);
+        }
+        myPtr = strtok(NULL, " ");
+    } 
+    rx_bytes = token[0];
+    rx_packets = token[1];
+    rx_errs = token[2];
+    tx_bytes = token[8];
+    tx_packets = token[9];
+    tx_errs = token[10];
+
+    ValConv rx_bytes_conv = readable_values(rx_bytes);
+    ValConv tx_bytes_conv = readable_values(tx_bytes);
+
+    printf("Network (enp5s0):\nRX: %.2f%s, %ld packets, %ld errors\nTX: %.2f%s, %ld packets, %ld errors\n",
+            rx_bytes_conv.conv_val, rx_bytes_conv.unit_conv, rx_packets, rx_errs, tx_bytes_conv.conv_val, 
+            tx_bytes_conv.unit_conv, tx_packets, tx_errs);
+            
+    fclose(fptr);
 }
