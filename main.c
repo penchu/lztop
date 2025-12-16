@@ -13,13 +13,19 @@ typedef struct {
     char *unit_conv;
 } ValConv;
 
+typedef struct {
+    unsigned long RX;
+    unsigned long TX;
+} Speed;
+
 void cpu_usage_calc(void);
 unsigned long* read_cpu_snapshot(void);
 void read_meminfo(void);
 ValConv readable_values(unsigned long value);
 void disk_usage(void);
 int disk_usage_calc(char *path);
-void network_stats(void);
+Speed network_stats(void);
+void ntwrk_spd_calc(void);
 
 int main(void) {
 
@@ -27,6 +33,7 @@ int main(void) {
     read_meminfo();
     disk_usage();
     network_stats();
+    ntwrk_spd_calc();
 
     return 0;
 }
@@ -187,7 +194,7 @@ int disk_usage_calc(char *path) {
     return 0;
 }
 
-void network_stats(void) {
+Speed network_stats(void) {
     char p[250];
     int n = 0;
     unsigned long rx_bytes;
@@ -209,8 +216,8 @@ void network_stats(void) {
             }             
         }
     }
-
-    // printf("%s\n", p);
+    
+    fclose(fptr);
     
     int i = 0;
     long token[20];
@@ -234,6 +241,29 @@ void network_stats(void) {
     printf("Network (enp5s0):\nRX: %.2f%s, %ld packets, %ld errors\nTX: %.2f%s, %ld packets, %ld errors\n",
             rx_bytes_conv.conv_val, rx_bytes_conv.unit_conv, rx_packets, rx_errs, tx_bytes_conv.conv_val, 
             tx_bytes_conv.unit_conv, tx_packets, tx_errs);
-            
-    fclose(fptr);
+
+    Speed s1;
+    s1.RX = rx_bytes;
+    s1.TX = tx_bytes;
+    return s1;
+}
+
+void ntwrk_spd_calc(void) {
+
+    Speed s1 = network_stats();
+    unsigned long rx1 = s1.RX;
+    unsigned long tx1 = s1.TX;
+    sleep(1);
+    Speed s2 = network_stats();
+    unsigned long rx2 = s2.RX;
+    unsigned long tx2 = s2.TX;
+
+    unsigned long rx_rate = s2.RX - s1.RX;
+    unsigned long tx_rate = s2.TX - s1.TX;
+
+    ValConv rxr_conv = readable_values(rx_rate);
+    ValConv txr_conv = readable_values(tx_rate);
+
+    printf("%.2f%s/s %.2f%s/s\n", rxr_conv.conv_val, rxr_conv.unit_conv, txr_conv.conv_val, txr_conv.unit_conv); 
+        
 }
