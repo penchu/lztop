@@ -32,7 +32,6 @@ Speed network_stats(void);
 void ntwrk_spd_calc(void);
 
 int main(void) {
-
     cpu_usage_calc();
     read_meminfo();
     disk_usage();
@@ -281,4 +280,8 @@ void ntwrk_spd_calc(void) {
 
     printf("Download: %.2f%s/s, Upload: %.2f%s/s\n", rxr_conv.conv_val, rxr_conv.unit_conv, txr_conv.conv_val, txr_conv.unit_conv); 
         
+}
+
+void process_list(void) {
+
 }
