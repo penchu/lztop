@@ -14,8 +14,12 @@ typedef struct {
 } ValConv;
 
 typedef struct {
-    unsigned long RX;
-    unsigned long TX;
+    unsigned long RXb;
+    unsigned long RXe;
+    unsigned long RXp;
+    unsigned long TXb;
+    unsigned long TXe;
+    unsigned long TXp;
 } Speed;
 
 void cpu_usage_calc(void);
@@ -235,35 +239,46 @@ Speed network_stats(void) {
     tx_packets = token[9];
     tx_errs = token[10];
 
-    ValConv rx_bytes_conv = readable_values(rx_bytes);
-    ValConv tx_bytes_conv = readable_values(tx_bytes);
-
-    printf("Network (enp5s0):\nRX: %.2f%s, %ld packets, %ld errors\nTX: %.2f%s, %ld packets, %ld errors\n",
-            rx_bytes_conv.conv_val, rx_bytes_conv.unit_conv, rx_packets, rx_errs, tx_bytes_conv.conv_val, 
-            tx_bytes_conv.unit_conv, tx_packets, tx_errs);
+    // ValConv rx_bytes_conv = readable_values(rx_bytes);
+    // ValConv tx_bytes_conv = readable_values(tx_bytes);
+    // printf("Network (enp5s0):\nRX: %.2f%s, %ld packets, %ld errors\nTX: %.2f%s, %ld packets, %ld errors\n",
+    //         rx_bytes_conv.conv_val, rx_bytes_conv.unit_conv, rx_packets, rx_errs, tx_bytes_conv.conv_val, 
+    //         tx_bytes_conv.unit_conv, tx_packets, tx_errs);
 
     Speed s1;
-    s1.RX = rx_bytes;
-    s1.TX = tx_bytes;
+    s1.RXb = rx_bytes;
+    s1.RXe = rx_errs;
+    s1.RXp = rx_packets;
+    s1.TXb = tx_bytes;
+    s1.TXe = tx_errs;
+    s1.TXp = tx_packets;
     return s1;
 }
 
 void ntwrk_spd_calc(void) {
 
     Speed s1 = network_stats();
-    unsigned long rx1 = s1.RX;
-    unsigned long tx1 = s1.TX;
+    unsigned long rx1 = s1.RXb;
+    unsigned long tx1 = s1.TXb;
+
+    ValConv rx_bytes_conv = readable_values(rx1);
+    ValConv tx_bytes_conv = readable_values(tx1);
+
+    printf("Network (enp5s0):\nRX: %.2f%s, %ld packets, %ld errors\nTX: %.2f%s, %ld packets, %ld errors\n",
+            rx_bytes_conv.conv_val, rx_bytes_conv.unit_conv, s1.RXp, s1.RXe, tx_bytes_conv.conv_val, 
+            tx_bytes_conv.unit_conv, s1.TXp, s1.TXe);
+
     sleep(1);
     Speed s2 = network_stats();
-    unsigned long rx2 = s2.RX;
-    unsigned long tx2 = s2.TX;
+    unsigned long rx2 = s2.RXb;
+    unsigned long tx2 = s2.TXb;
 
-    unsigned long rx_rate = s2.RX - s1.RX;
-    unsigned long tx_rate = s2.TX - s1.TX;
+    unsigned long rx_rate = s2.RXb - s1.RXb;
+    unsigned long tx_rate = s2.TXb - s1.TXb;
 
     ValConv rxr_conv = readable_values(rx_rate);
     ValConv txr_conv = readable_values(tx_rate);
 
-    printf("%.2f%s/s %.2f%s/s\n", rxr_conv.conv_val, rxr_conv.unit_conv, txr_conv.conv_val, txr_conv.unit_conv); 
+    printf("Download: %.2f%s/s, Upload: %.2f%s/s\n", rxr_conv.conv_val, rxr_conv.unit_conv, txr_conv.conv_val, txr_conv.unit_conv); 
         
 }
