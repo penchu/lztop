@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <sys/statvfs.h>
+#include <dirent.h>
 
 #define token_number 11
 #define token_size 10
@@ -30,6 +31,7 @@ void disk_usage(void);
 int disk_usage_calc(char *path);
 Speed network_stats(void);
 void ntwrk_spd_calc(void);
+int process_list(void);
 
 int main(void) {
     cpu_usage_calc();
@@ -37,6 +39,8 @@ int main(void) {
     disk_usage();
     network_stats();
     ntwrk_spd_calc();
+
+    process_list();
 
     return 0;
 }
@@ -282,6 +286,19 @@ void ntwrk_spd_calc(void) {
         
 }
 
-void process_list(void) {
+int process_list(void) {
+    struct dirent *pDirent;
+    DIR *pDir;
+    pDir = opendir("/proc");
+    if (pDir = NULL) {
+        printf("Cannot open directory /proc");
+        return 1;
+    }
 
+    while ((pDirent = readdir(pDir)) != NULL && isdigit(pDirent->d_name)) {
+        printf ("[%s]\n", pDirent->d_name);
+    }
+
+    closedir(pDir);
+    return 0;
 }
