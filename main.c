@@ -290,13 +290,13 @@ int process_list(void) {
     struct dirent *pDirent;
     DIR *pDir;
     pDir = opendir("/proc");
-    if (pDir = NULL) {
+    if (pDir == NULL) {
         printf("Cannot open directory /proc");
         return 1;
     }
 
-    while ((pDirent = readdir(pDir)) != NULL && isdigit(pDirent->d_name)) {
-        printf ("[%s]\n", pDirent->d_name);
+    while ((pDirent = readdir(pDir)) != NULL) {
+        if (isdigit(pDirent->d_name[0])) printf ("[%s] ", pDirent->d_name);
     }
 
     closedir(pDir);
