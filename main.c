@@ -295,10 +295,39 @@ int process_list(void) {
         return 1;
     }
 
+    char **procs = calloc(1, 8);
+    int n = 0;
+    if (procs == NULL) {
+        perror("calloc");
+        exit(1);
+    }
+       
     while ((pDirent = readdir(pDir)) != NULL) {
-        if (isdigit(pDirent->d_name[0])) printf ("[%s] ", pDirent->d_name);
+        if (isdigit(pDirent->d_name[0])) {
+            // printf ("%s ", pDirent->d_name);
+            procs[n++] = pDirent->d_name;
+            procs[n] = calloc(1, 8);
+        }
+    }
+    procs[n] = NULL;
+
+    // int i = 0;
+    // while (procs[i] != NULL) {
+    //     printf ("%s ", procs[i++]);
+    // }
+
+
+    FILE *fptr;
+    int j = 0;
+    char path_pid[50];
+    while (procs[j] != NULL) {
+        snprintf(path_pid, 50, "/proc%s/comm", procs[j]);
+        fptr = fopen(path_pid, "r");
+     
     }
 
+
+    free(procs);
     closedir(pDir);
     return 0;
 }
