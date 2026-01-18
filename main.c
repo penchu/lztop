@@ -23,6 +23,12 @@ typedef struct {
     unsigned long TXp;
 } Speed;
 
+typedef struct {
+   pid_t pid;
+//    char pid[12];
+   char name[17];
+} Process;
+
 void cpu_usage_calc(void);
 unsigned long* read_cpu_snapshot(void);
 void read_meminfo(void);
@@ -31,7 +37,9 @@ void disk_usage(void);
 int disk_usage_calc(char *path);
 Speed network_stats(void);
 void ntwrk_spd_calc(void);
-int process_list(void);
+int processes_list(void);
+
+Process *process_list = NULL;
 
 int main(void) {
     cpu_usage_calc();
@@ -40,7 +48,7 @@ int main(void) {
     network_stats();
     ntwrk_spd_calc();
 
-    process_list();
+    processes_list();
 
     return 0;
 }
@@ -286,7 +294,7 @@ void ntwrk_spd_calc(void) {
         
 }
 
-int process_list(void) {
+int processes_list(void) {
     struct dirent *pDirent;
     DIR *pDir;
     pDir = opendir("/proc");
@@ -295,39 +303,58 @@ int process_list(void) {
         return 1;
     }
 
-    char **procs = calloc(1, 8);
+    // char **procs = calloc(1, 8);    
+    // if (procs == NULL) {
+    //     perror("calloc");
+    //     exit(1);
+    // }
+
     int n = 0;
-    if (procs == NULL) {
-        perror("calloc");
-        exit(1);
-    }
        
+    int capacity = 128;
+    process_list = malloc(capacity * sizeof(Process));
+
+    FILE *fptr;
+    char path_pid[300];
+    char comm_name[50];
+
     while ((pDirent = readdir(pDir)) != NULL) {
         if (isdigit(pDirent->d_name[0])) {
             // printf ("%s ", pDirent->d_name);
-            procs[n++] = pDirent->d_name;
-            procs[n] = calloc(1, 8);
+            // procs[n++] = pDirent->d_name;
+            // procs[n] = calloc(1, 8);
+            process_list[n].pid = atoi(pDirent->d_name);
+
+            snprintf(path_pid, 300, "/proc/%s/comm", pDirent->d_name);
+            fptr = fopen(path_pid, "r");
+            fgets(process_list[n].name, 17, fptr);
+            process_list[n].name[strcspn(process_list[n].name, "\n")] = '\0';
+            
+            // strcpy(process_list[n++].pid, atoi(pDirent->d_name));
+            if (++n >= capacity) {
+                capacity *= 2;
+                process_list = realloc(process_list, capacity * sizeof(Process));
+            }
         }
     }
-    procs[n] = NULL;
-
-    // int i = 0;
-    // while (procs[i] != NULL) {
-    //     printf ("%s ", procs[i++]);
+    // procs[n] = NULL;
+    // FILE *fptr;
+    // int j = 0;
+    // char path_pid[50];
+    // while (procs[j] != NULL) {
+    //     snprintf(path_pid, 50, "/proc%s/comm", procs[j]);
+    //     fptr = fopen(path_pid, "r");     
     // }
+    // fclose(fptr);
+    // free(procs);
 
+    fclose(fptr);
+    closedir(pDir);
 
-    FILE *fptr;
-    int j = 0;
-    char path_pid[50];
-    while (procs[j] != NULL) {
-        snprintf(path_pid, 50, "/proc%s/comm", procs[j]);
-        fptr = fopen(path_pid, "r");
-     
+    for (int i = 0; i <= 10; i++) {
+        printf("%d:%s\n", process_list[i].pid, process_list[i].name);
     }
 
 
-    free(procs);
-    closedir(pDir);
     return 0;
 }
