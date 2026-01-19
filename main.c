@@ -326,21 +326,29 @@ int processes_list(void) {
             // }
             fclose(fptr);
             
-            snprintf(path_pid, 300, "/proc/%s/stat", pDirent->d_name);            
+            // snprintf(path_pid, 300, "/proc/%s/stat", pDirent->d_name);            
+            // fptr = fopen(path_pid, "r");
+            // char buff[128] = {0};
+            // fgets(buff, 128, fptr);
+            // int space = 0;
+            // for (int i = 0; buff[i] != '\0'; i++) {                
+            //     if (buff[i] == ' ') {
+            //         space++;                    
+            //     }
+            //     if (space == 2) {
+            //         process_list[n].state = buff[++i];
+            //         break;
+            //     }
+            // }
+            // fclose(fptr);
+
+            snprintf(path_pid, 300, "/proc/%s/status", pDirent->d_name);            
             fptr = fopen(path_pid, "r");
             char buff[128] = {0};
-            fgets(buff, 128, fptr);
-            int space = 0;
-            for (int i = 0; buff[i] != '\0'; i++) {                
-                if (buff[i] == ' ') {
-                    space++;                    
-                }
-                if (space == 2) {
-                    process_list[n].state = buff[++i];
-                    break;
-                }
+            while (fgets(buff, 128, fptr)) {
+                if (strncmp("State", buff, 5) == 0) process_list[n].state = buff[7];
             }
-            fclose(fptr);
+
             if (++n >= capacity) {
                 capacity *= 2;
                 process_list = realloc(process_list, capacity * sizeof(Process));
