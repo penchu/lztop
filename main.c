@@ -25,8 +25,8 @@ typedef struct {
 
 typedef struct {
    pid_t pid;
-//    char pid[12];
    char name[17];
+   char state;
 } Process;
 
 void cpu_usage_calc(void);
@@ -303,12 +303,6 @@ int processes_list(void) {
         return 1;
     }
 
-    // char **procs = calloc(1, 8);    
-    // if (procs == NULL) {
-    //     perror("calloc");
-    //     exit(1);
-    // }
-
     int n = 0;
        
     int capacity = 128;
@@ -320,41 +314,45 @@ int processes_list(void) {
 
     while ((pDirent = readdir(pDir)) != NULL) {
         if (isdigit(pDirent->d_name[0])) {
-            // printf ("%s ", pDirent->d_name);
-            // procs[n++] = pDirent->d_name;
-            // procs[n] = calloc(1, 8);
             process_list[n].pid = atoi(pDirent->d_name);
 
             snprintf(path_pid, 300, "/proc/%s/comm", pDirent->d_name);
             fptr = fopen(path_pid, "r");
             fgets(process_list[n].name, 17, fptr);
             process_list[n].name[strcspn(process_list[n].name, "\n")] = '\0';
+            // if (++n >= capacity) {
+            //     capacity *= 2;
+            //     process_list = realloc(process_list, capacity * sizeof(Process));
+            // }
+            fclose(fptr);
             
-            // strcpy(process_list[n++].pid, atoi(pDirent->d_name));
+            snprintf(path_pid, 300, "/proc/%s/stat", pDirent->d_name);            
+            fptr = fopen(path_pid, "r");
+            char buff[128] = {0};
+            fgets(buff, 128, fptr);
+            int space = 0;
+            for (int i = 0; buff[i] != '\0'; i++) {                
+                if (buff[i] == ' ') {
+                    space++;                    
+                }
+                if (space == 2) {
+                    process_list[n].state = buff[++i];
+                    break;
+                }
+            }
+            fclose(fptr);
             if (++n >= capacity) {
                 capacity *= 2;
                 process_list = realloc(process_list, capacity * sizeof(Process));
             }
         }
     }
-    // procs[n] = NULL;
-    // FILE *fptr;
-    // int j = 0;
-    // char path_pid[50];
-    // while (procs[j] != NULL) {
-    //     snprintf(path_pid, 50, "/proc%s/comm", procs[j]);
-    //     fptr = fopen(path_pid, "r");     
-    // }
-    // fclose(fptr);
-    // free(procs);
-
-    fclose(fptr);
+    
     closedir(pDir);
 
     for (int i = 0; i <= 10; i++) {
-        printf("%d:%s\n", process_list[i].pid, process_list[i].name);
+        printf("%d:%s %c\n", process_list[i].pid, process_list[i].name, process_list[i].state);
     }
-
 
     return 0;
 }
