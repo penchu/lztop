@@ -29,6 +29,8 @@ typedef struct {
    char state;
    int rss;
    int vsize;
+   int utime;
+   int stime;
 } Process;
 
 void cpu_usage_calc(void);
@@ -318,32 +320,6 @@ int processes_list(void) {
         if (isdigit(pDirent->d_name[0])) {
             process_list[n].pid = atoi(pDirent->d_name);
 
-            // snprintf(path_pid, 300, "/proc/%s/comm", pDirent->d_name);
-            // fptr = fopen(path_pid, "r");
-            // fgets(process_list[n].name, 17, fptr);
-            // process_list[n].name[strcspn(process_list[n].name, "\n")] = '\0';
-            // // if (++n >= capacity) {
-            // //     capacity *= 2;
-            // //     process_list = realloc(process_list, capacity * sizeof(Process));
-            // // }
-            // fclose(fptr);
-            
-            // snprintf(path_pid, 300, "/proc/%s/stat", pDirent->d_name);            
-            // fptr = fopen(path_pid, "r");
-            // char buff[128] = {0};
-            // fgets(buff, 128, fptr);
-            // int space = 0;
-            // for (int i = 0; buff[i] != '\0'; i++) {                
-            //     if (buff[i] == ' ') {
-            //         space++;                    
-            //     }
-            //     if (space == 2) {
-            //         process_list[n].state = buff[++i];
-            //         break;
-            //     }
-            // }
-            // fclose(fptr);
-
             snprintf(path_pid, 300, "/proc/%s/status", pDirent->d_name);            
             fptr = fopen(path_pid, "r");
             char buff[128] = {0};
@@ -367,15 +343,28 @@ int processes_list(void) {
             }
             fclose(fptr);            
 
-            // snprintf(path_pid, 300, "/proc/%s/status", pDirent->d_name);            
-            // fptr = fopen(path_pid, "r");
-            // while (fgets(buff, 128, fptr)) {
-            //     if (strncmp("State", buff, 5) == 0) {
-            //         process_list[n].state = buff[7];
-            //         break;
-            //     }
-            // }
-            // fclose(fptr);
+            snprintf(path_pid, 300, "/proc/%s/stat", pDirent->d_name);            
+            fptr = fopen(path_pid, "r");
+            fgets(buff, 128, fptr);
+            buff[strcspn(buff, "\n")] = '\0';
+            int i = 0;
+            int m = 2;
+            while (buff[i] != ')') {
+                i++;
+                if (buff[i] == ')') {
+                    i++;
+                    while (buff[i] != '\0') {
+                        if (buff[i] == ' ') m++;
+                        if (m == 13) {
+                            process_list[n].utime = buff[i+1];
+                            process_list[n].stime = buff[i+3];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            fclose(fptr);
 
             if (++n >= capacity) {
                 capacity *= 2;
@@ -386,17 +375,14 @@ int processes_list(void) {
     
     closedir(pDir);
 
-    // ValConv struct_vsize = readable_values(process_list[i].vsize);
-    // ValConv struct_rss = readable_values(process_list[i].rss);
-
     for (int i = 0; i <= 10; i++) {
-        ValConv struct_vsize = readable_values(process_list[i].vsize);
-        ValConv struct_rss = readable_values(process_list[i].rss);
-        // printf("%d:%s %c %d/%d\n", process_list[i].pid, process_list[i].name, process_list[i].state, 
-        // process_list[i].vsize, process_list[i].rss);
-        printf("%d:%s %c %.2f%s/%.2f%s\n", process_list[i].pid, process_list[i].name, process_list[i].state,
-        struct_vsize.conv_val, struct_vsize.unit_conv, struct_rss.conv_val, struct_rss.unit_conv);
-        // process_list[i].vsize, process_list[i].rss);        
+        if (process_list[i].vsize > 0) {
+            ValConv struct_vsize = readable_values(process_list[i].vsize*1024);
+            ValConv struct_rss = readable_values(process_list[i].rss*1024);
+            printf("%d:%s %c %.2f%s/%.2f%s\n", process_list[i].pid, process_list[i].name, process_list[i].state,
+            struct_vsize.conv_val, struct_vsize.unit_conv, struct_rss.conv_val, struct_rss.unit_conv);
+        }
+        else (printf("%d:%s %c\n", process_list[i].pid, process_list[i].name, process_list[i].state));
     }
 
     return 0;
