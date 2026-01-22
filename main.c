@@ -29,8 +29,11 @@ typedef struct {
    char state;
    int rss;
    int vsize;
-   int utime;
-   int stime;
+   int proc_cpu_usage;
+//    int utime;
+//    int stime;
+
+
 } Process;
 
 void cpu_usage_calc(void);
@@ -347,22 +350,45 @@ int processes_list(void) {
             fptr = fopen(path_pid, "r");
             fgets(buff, 128, fptr);
             buff[strcspn(buff, "\n")] = '\0';
-            int i = 0;
             int m = 2;
-            while (buff[i] != ')') {
-                i++;
-                if (buff[i] == ')') {
-                    i++;
+            int utime_snp1 = 0;
+            int stime_snp1 = 0;
+            int utime_snp2 = 0;
+            int stime_snp2 = 0;
+
+            for (int i = 0; buff[i] != '\0'; i++) {
+                if (buff[i] != ')') {
+                    i += 2;
                     while (buff[i] != '\0') {
                         if (buff[i] == ' ') m++;
                         if (m == 13) {
-                            process_list[n].utime = buff[i+1];
-                            process_list[n].stime = buff[i+3];
-                            break;
+                            utime_snp1 = buff[i+1];
+                            stime_snp1 = buff[i+3];
+                            // printf("%d %d\n", utime_snp1, stime_snp1);     
+                            // break;                      
                         }
+                        break;
                     }
                 }
+                break;
             }
+            // sleep(1);
+            // for (int i = 0; buff[i] != '\0'; i++) {
+            //     if (buff[i] != ')') {
+            //         i += 2;
+            //         while (buff[i] != '\0') {
+            //             if (buff[i] == ' ') m++;
+            //             if (m == 13) {
+            //                 utime_snp2 = buff[i+1];
+            //                 stime_snp2 = buff[i+3];                            
+            //             }
+            //             break;
+            //         }
+            //     }
+            //     break;
+            // }
+
+            // process_list[n].proc_cpu_usage = (utime_snp2 + stime_snp2) - (utime_snp1 + stime_snp1);
 
             fclose(fptr);
 
@@ -379,10 +405,12 @@ int processes_list(void) {
         if (process_list[i].vsize > 0) {
             ValConv struct_vsize = readable_values(process_list[i].vsize*1024);
             ValConv struct_rss = readable_values(process_list[i].rss*1024);
-            printf("%d:%s %c %.2f%s/%.2f%s\n", process_list[i].pid, process_list[i].name, process_list[i].state,
-            struct_vsize.conv_val, struct_vsize.unit_conv, struct_rss.conv_val, struct_rss.unit_conv);
+            printf("%d:%s %c %.2f%s/%.2f%s %d\n", process_list[i].pid, process_list[i].name, process_list[i].state,
+            struct_vsize.conv_val, struct_vsize.unit_conv, struct_rss.conv_val, struct_rss.unit_conv, 
+            process_list[i].proc_cpu_usage);
         }
-        else (printf("%d:%s %c\n", process_list[i].pid, process_list[i].name, process_list[i].state));
+        else (printf("%d:%s %c %d\n", process_list[i].pid, process_list[i].name, process_list[i].state, 
+            process_list[i].proc_cpu_usage));
     }
 
     return 0;
