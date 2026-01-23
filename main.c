@@ -355,23 +355,34 @@ int processes_list(void) {
             int stime_snp1 = 0;
             int utime_snp2 = 0;
             int stime_snp2 = 0;
-
+            
+            char *p2 = NULL;
             for (int i = 0; buff[i] != '\0'; i++) {
                 if (buff[i] != ')') {
-                    i += 2;
-                    while (buff[i] != '\0') {
-                        if (buff[i] == ' ') m++;
-                        if (m == 13) {
-                            utime_snp1 = buff[i+1];
-                            stime_snp1 = buff[i+3];
-                            // printf("%d %d\n", utime_snp1, stime_snp1);     
-                            // break;                      
-                        }
-                        break;
-                    }
+                    p2 = buff + 2;
+                    strtok(p2, " ");
                 }
-                break;
             }
+            utime_snp1 = p2[10];
+            stime_snp1 = p2[11];
+            // fclose(fptr);
+            sleep(1);
+
+            // fptr = fopen(path_pid, "r");
+            rewind(fptr);
+            fgets(buff, 128, fptr);
+            buff[strcspn(buff, "\n")] = '\0';
+            for (int i = 0; buff[i] != '\0'; i++) {
+                if (buff[i] != ')') {
+                    p2 = buff + 2;
+                    strtok(p2, " ");
+                }
+            }
+            utime_snp2 = p2[10];
+            stime_snp2 = p2[11];
+            fclose(fptr);
+
+
             // sleep(1);
             // for (int i = 0; buff[i] != '\0'; i++) {
             //     if (buff[i] != ')') {
@@ -389,8 +400,6 @@ int processes_list(void) {
             // }
 
             // process_list[n].proc_cpu_usage = (utime_snp2 + stime_snp2) - (utime_snp1 + stime_snp1);
-
-            fclose(fptr);
 
             if (++n >= capacity) {
                 capacity *= 2;
