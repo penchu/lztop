@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <sys/statvfs.h>
 #include <dirent.h>
+#include <time.h>
 
 #define token_number 11
 #define token_size 10
@@ -389,7 +390,12 @@ int processes_list(void) {
             // stime_snp1 = p2[11];
             
             // fclose(fptr);
-            sleep(0.3);
+            // sleep(3);
+            struct timespec interval;
+            interval.tv_sec = 0;
+            interval.tv_nsec = 250000000;
+
+            nanosleep(&interval, NULL);   
 
             // fptr = fopen(path_pid, "r");
             rewind(fptr);
