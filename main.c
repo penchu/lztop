@@ -350,6 +350,8 @@ int processes_list(void) {
             fptr = fopen(path_pid, "r");
             fgets(buff, 128, fptr);
             buff[strcspn(buff, "\n")] = '\0';
+            // printf("%s\n", buff);
+
             int m = 2;
             int utime_snp1 = 0;
             int stime_snp1 = 0;
@@ -358,30 +360,58 @@ int processes_list(void) {
             
             char *p2 = NULL;
             for (int i = 0; buff[i] != '\0'; i++) {
-                if (buff[i] != ')') {
-                    p2 = buff + 2;
-                    strtok(p2, " ");
+                if (buff[i] == ')') {
+                    p2 = buff + i + 2;
+                    break;
                 }
             }
-            utime_snp1 = p2[10];
-            stime_snp1 = p2[11];
+            // printf("%s\n", p2);
+
+            int n1 = 1;
+            char *p3 = strtok(p2, " ");
+            while (p3 != NULL) {
+                p3 = strtok(NULL, " ");
+                n1++;
+                if (n1 == 12) utime_snp1 = atoi(p3);
+                if (n1 == 13) {
+                    stime_snp1 = atoi(p3);
+                    break;
+                }
+            }
+            // printf("%d %d\n", utime_snp1, stime_snp1);
+
+            // for (int i = 0; p2[i] != NULL; i++) {
+            //     printf("%d ", p2[i]);
+            // }
+            // printf("\n");
+
+            // utime_snp1 = p2[10];
+            // stime_snp1 = p2[11];
+            
             // fclose(fptr);
-            sleep(1);
+            sleep(0.3);
 
             // fptr = fopen(path_pid, "r");
             rewind(fptr);
             fgets(buff, 128, fptr);
             buff[strcspn(buff, "\n")] = '\0';
             for (int i = 0; buff[i] != '\0'; i++) {
-                if (buff[i] != ')') {
-                    p2 = buff + 2;
-                    strtok(p2, " ");
+                if (buff[i] == ')') {
+                    p2 = buff + i + 2;
                 }
             }
-            utime_snp2 = p2[10];
-            stime_snp2 = p2[11];
+            n1 = 1;
+            p3 = strtok(p2, " ");
+            while (p3 != NULL) {
+                p3 = strtok(NULL, " ");
+                n1++;
+                if (n1 == 12) utime_snp1 = atoi(p3);
+                if (n1 == 13) {
+                    stime_snp1 = atoi(p3);
+                    break;
+                }
+            }
             fclose(fptr);
-
 
             // sleep(1);
             // for (int i = 0; buff[i] != '\0'; i++) {
@@ -399,7 +429,8 @@ int processes_list(void) {
             //     break;
             // }
 
-            // process_list[n].proc_cpu_usage = (utime_snp2 + stime_snp2) - (utime_snp1 + stime_snp1);
+            // printf("usage: %d %d %d %d\n", utime_snp2, stime_snp2, utime_snp1, stime_snp1);
+            process_list[n].proc_cpu_usage = (utime_snp2 + stime_snp2) - (utime_snp1 + stime_snp1);            
 
             if (++n >= capacity) {
                 capacity *= 2;
