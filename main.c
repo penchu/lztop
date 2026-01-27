@@ -47,6 +47,8 @@ Speed network_stats(void);
 void ntwrk_spd_calc(void);
 int processes_list(void);
 // void utime_stime_read(void);
+int compare_sort(const void *a, const void *b);
+int compare_search(const void* a, const void* b);
 
 Process *process_list = NULL;
 
@@ -326,6 +328,9 @@ int processes_list(void) {
     int utime_snp2 = 0;
     int stime_snp2 = 0;
 
+    int size = sizeof(process_list) / sizeof(process_list[0]);
+    int *item;
+
     while ((pDirent = readdir(pDir)) != NULL) {
         if (isdigit(pDirent->d_name[0])) {
             process_list[n].pid = atoi(pDirent->d_name);
@@ -382,8 +387,10 @@ int processes_list(void) {
                     process_list[n].stime1 = atoi(p3);
                     break;
                 }
-            }            
+            }    
+            fclose(fptr);        
             
+            // int size = sizeof(process_list) / sizeof(process_list[0]);            
             // struct timespec interval;
             // interval.tv_sec = 0;
             // interval.tv_nsec = 250000000;
@@ -418,6 +425,7 @@ int processes_list(void) {
             }
         }
     }
+    qsort (process_list, size, sizeof(process_list[0]), compare_sort);
     struct timespec interval;
     interval.tv_sec = 0;
     interval.tv_nsec = 250000000;
@@ -429,6 +437,9 @@ int processes_list(void) {
             fptr = fopen(path_pid, "r");
             fgets(buff, 128, fptr);
             buff[strcspn(buff, "\n")] = '\0';
+
+            int key = atoi(pDirent->d_name);
+            item = (int*)bsearch(&key, process_list, size, sizeof(process_list[0]), compare_search);
 
             char *p = NULL;
             for (int i = 0; buff[i] != '\0'; i++) {
@@ -443,12 +454,15 @@ int processes_list(void) {
             while (p2 != NULL) {
                 p2 = strtok(NULL, " ");
                 n1++;
-                if (n1 == 12) utime_snp1 = atoi(p3);
+                if (n1 == 12) process_list[*item].utime2 = atoi(p2);
                 if (n1 == 13) {
-                    stime_snp1 = atoi(p2);
+                    process_list[*item].stime2 = atoi(p2);
                     break;
                 }
-            }  
+            } 
+            process_list[*item].proc_cpu_usage = (process_list[*item].utime2 + process_list[*item].stime2) 
+                                                - (process_list[*item].utime1 + process_list[*item].stime1); 
+            fclose(fptr); 
         }
     }
 
@@ -468,6 +482,16 @@ int processes_list(void) {
     }
 
     return 0;
+}
+
+int compare_sort(const void *a, const void *b) {
+    const int *valA = a;
+    const int *valB = b;
+    return *valA - *valB;
+}
+
+int compare_search(const void* a, const void* b) {
+    return (*(int*)a - *(int*)b);
 }
 
 // void utime_stime_read(void) {
