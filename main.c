@@ -328,7 +328,6 @@ int processes_list(void) {
     int utime_snp2 = 0;
     int stime_snp2 = 0;
 
-    int size = sizeof(process_list) / sizeof(process_list[0]);
     Process *item;
 
     while ((pDirent = readdir(pDir)) != NULL) {
@@ -426,7 +425,11 @@ int processes_list(void) {
         }
     }
     
-    qsort(process_list, size, sizeof(process_list[0]), compare_sort);
+    // int size = sizeof(process_list)/sizeof(process_list[0]);
+    // printf("size is: %d\n", size);
+
+    qsort(process_list, n, sizeof(process_list[0]), compare_sort);
+
     struct timespec interval;
     interval.tv_sec = 0;
     interval.tv_nsec = 250000000;
@@ -441,7 +444,7 @@ int processes_list(void) {
             buff[strcspn(buff, "\n")] = '\0';
 
             pid_t key = atoi(pDirent->d_name);
-            item = bsearch(&key, process_list, size, sizeof(process_list[0]), compare_search);
+            item = bsearch(&key, process_list, n, sizeof(process_list[0]), compare_search);
 
             char *p = NULL;
             for (int i = 0; buff[i] != '\0'; i++) {
@@ -459,23 +462,23 @@ int processes_list(void) {
                 if (item != NULL) {
                     if (n1 == 12) item->utime2 = atoi(p2);
                     if (n1 == 13) {
-                        item->stime2 = atoi(p2);
+                        item->stime2 = atoi(p2);                        
                         break;
-                    }
+                    }                    
                 }
             } 
-            printf("check: %d %d %d %d\n", item->stime1, item->stime2, item->utime1, item->utime2);
+            // printf("check: %d %d %d %d\n", item->stime1, item->stime2, item->utime1, item->utime2);
             item->proc_cpu_usage = (item->utime2 + item->stime2) - (item->utime1 + item->stime1); 
             fclose(fptr); 
         }
     }    
     closedir(pDir);    
 
-    for (int i = 0; i <= 5; i++) {
+    for (int i = 0; i <= n; i++) {
         if (process_list[i].vsize > 0) {
             ValConv struct_vsize = readable_values(process_list[i].vsize*1024);
             ValConv struct_rss = readable_values(process_list[i].rss*1024);
-            printf("%d:%s %c %.2f%s/%.2f%s %d %d %d %d %d\n", 
+            printf("%d:%s %c %.2f%s/%.2f%s %d\n", 
                     process_list[i].pid, 
                     process_list[i].name, 
                     process_list[i].state,
@@ -483,11 +486,7 @@ int processes_list(void) {
                     struct_vsize.unit_conv, 
                     struct_rss.conv_val, 
                     struct_rss.unit_conv, 
-                    process_list[i].proc_cpu_usage,
-                    process_list[i].stime1,
-                    process_list[i].utime1,
-                    process_list[i].stime2,
-                    process_list[i].utime2);
+                    process_list[i].proc_cpu_usage);
         }
         else (printf("%d:%s %c %d\n", 
                     process_list[i].pid, 
@@ -507,8 +506,10 @@ int compare_sort(const void *a, const void *b) {
 
 int compare_search(const void* a, const void* b) {
     // return (*(int*)a - *(int*)b);
+    // printf("check\n");
     const pid_t *key = (const pid_t *)a;
     const Process *elem = (const Process *)b;
+    // printf("check: %d %d \n", *key, elem->pid);
     if (*key > elem->pid) return 1;
     if (*key < elem->pid) return -1;
     return 0;
