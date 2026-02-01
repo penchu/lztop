@@ -39,13 +39,13 @@ typedef struct {
 
 void cpu_usage_calc(void);
 unsigned long* read_cpu_snapshot(void);
-void read_meminfo(void);
+void read_meminfo(unsigned long *MemTotal);
 ValConv readable_values(unsigned long value);
 void disk_usage(void);
 int disk_usage_calc(char *path);
 Speed network_stats(void);
 void ntwrk_spd_calc(void);
-int processes_list(void);
+int processes_list(unsigned long MemTotal);
 int compare_sort(const void *a, const void *b);
 int compare_sort_cpu(const void *a, const void *b);
 int compare_search(const void* a, const void* b);
@@ -53,13 +53,15 @@ int compare_search(const void* a, const void* b);
 Process *process_list = NULL;
 
 int main(void) {
+    unsigned long MemTotal;
+
     cpu_usage_calc();
-    read_meminfo();
+    read_meminfo(&MemTotal);
     disk_usage();
     network_stats();
     ntwrk_spd_calc();
 
-    processes_list();
+    processes_list(MemTotal);
 
     return 0;
 }
@@ -117,7 +119,7 @@ unsigned long* read_cpu_snapshot(void) {
     return token_int;
 }
 
-void read_meminfo(void) {
+void read_meminfo(unsigned long *MemTotal) {
     FILE *fptr;
     fptr = fopen("/proc/meminfo", "r");
     size_t buff_size = 128;    
@@ -126,7 +128,7 @@ void read_meminfo(void) {
     char token_new[token_number];
     int n = 0;
     int m = 0;
-    unsigned long MemTotal = 0;
+    // unsigned long MemTotal = 0;
     unsigned long MemAvailable = 0;
     unsigned long MemUsed = 0;
     float MemUsage = 0; 
@@ -138,7 +140,7 @@ void read_meminfo(void) {
             p = buff;
             for (int i = 0; buff[i] != '\0'; i++) {
                 if (isdigit(buff[i])) {                
-                    MemTotal = strtol(p + i, NULL, 10);
+                    *MemTotal = strtol(p + i, NULL, 10);
                     break;
                 }
             }
@@ -158,11 +160,11 @@ void read_meminfo(void) {
     }
     fclose(fptr);
 
-    MemUsage = (((double)MemTotal - (double)MemAvailable)/(double)MemTotal)*100;
-    MemUsed = MemTotal - MemAvailable;
+    MemUsage = (((double)(*MemTotal) - (double)MemAvailable)/(double)(*MemTotal))*100;
+    MemUsed = *MemTotal - MemAvailable;
 
     ValConv struct_used = readable_values(MemUsed*1024);
-    ValConv struct_total = readable_values(MemTotal*1024);
+    ValConv struct_total = readable_values(*MemTotal*1024);
 
     printf("Memory usage is: %.2f%s/%.2f%s %.2f%%\n", struct_used.conv_val, struct_used.unit_conv, struct_total.conv_val, struct_total.unit_conv, MemUsage); 
 }
@@ -305,7 +307,7 @@ void ntwrk_spd_calc(void) {
         
 }
 
-int processes_list(void) {
+int processes_list(unsigned long MemTotal) {
     struct dirent *pDirent;
     DIR *pDir;
     pDir = opendir("/proc");
@@ -323,10 +325,6 @@ int processes_list(void) {
     char path_pid[300];
     char comm_name[50];
     char buff[128] = {0};
-    int utime_snp1 = 0;
-    int stime_snp1 = 0;
-    int utime_snp2 = 0;
-    int stime_snp2 = 0;
 
     Process *item;
 
@@ -443,7 +441,9 @@ int processes_list(void) {
         if (process_list[i].vsize > 0) {
             ValConv struct_vsize = readable_values(process_list[i].vsize*1024);
             ValConv struct_rss = readable_values(process_list[i].rss*1024);
-            printf("%d:%s %c %.2f%s/%.2f%s %d%%\n", 
+            // printf("%ld\n", MemTotal);
+            double mem_usage = ((double)process_list[i].rss/MemTotal)*100;
+            printf("%d:%s %c %.2f%s/%.2f%s cpu:%d%% mem:%.2f%%\n", 
                     process_list[i].pid, 
                     process_list[i].name, 
                     process_list[i].state,
@@ -451,7 +451,8 @@ int processes_list(void) {
                     struct_vsize.unit_conv, 
                     struct_rss.conv_val, 
                     struct_rss.unit_conv, 
-                    process_list[i].proc_cpu_usage);
+                    process_list[i].proc_cpu_usage,
+                    mem_usage);
         }
         else (printf("%d:%s %c %d\n", 
                     process_list[i].pid, 
