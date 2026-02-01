@@ -46,8 +46,8 @@ int disk_usage_calc(char *path);
 Speed network_stats(void);
 void ntwrk_spd_calc(void);
 int processes_list(void);
-// void utime_stime_read(void);
 int compare_sort(const void *a, const void *b);
+int compare_sort_cpu(const void *a, const void *b);
 int compare_search(const void* a, const void* b);
 
 Process *process_list = NULL;
@@ -336,7 +336,6 @@ int processes_list(void) {
 
             snprintf(path_pid, 300, "/proc/%s/status", pDirent->d_name);            
             fptr = fopen(path_pid, "r");
-            // char buff[128] = {0};
             char *p = NULL;
             while (fgets(buff, 128, fptr)) {
                 if (strncmp("Name", buff, 4) == 0) {
@@ -361,12 +360,6 @@ int processes_list(void) {
             fptr = fopen(path_pid, "r");
             fgets(buff, 128, fptr);
             buff[strcspn(buff, "\n")] = '\0';
-
-            // int m = 2;
-            // int utime_snp1 = 0;
-            // int stime_snp1 = 0;
-            // int utime_snp2 = 0;
-            // int stime_snp2 = 0;
             
             char *p2 = NULL;
             for (int i = 0; buff[i] != '\0'; i++) {
@@ -387,36 +380,7 @@ int processes_list(void) {
                     break;
                 }
             }    
-            fclose(fptr);        
-            
-            // int size = sizeof(process_list) / sizeof(process_list[0]);            
-            // struct timespec interval;
-            // interval.tv_sec = 0;
-            // interval.tv_nsec = 250000000;
-            // nanosleep(&interval, NULL);  
-
-            // rewind(fptr);
-            // fgets(buff, 128, fptr);
-            // buff[strcspn(buff, "\n")] = '\0';
-            // for (int i = 0; buff[i] != '\0'; i++) {
-            //     if (buff[i] == ')') {
-            //         p2 = buff + i + 2;
-            //     }
-            // }
-            // n1 = 1;
-            // p3 = strtok(p2, " ");
-            // while (p3 != NULL) {
-            //     p3 = strtok(NULL, " ");
-            //     n1++;
-            //     if (n1 == 12) utime_snp1 = atoi(p3);
-            //     if (n1 == 13) {
-            //         stime_snp1 = atoi(p3);
-            //         break;
-            //     }
-            // }
-            // fclose(fptr);
-           
-            // process_list[n].proc_cpu_usage = (utime_snp2 + stime_snp2) - (utime_snp1 + stime_snp1);            
+            fclose(fptr);                  
 
             if (++n >= capacity) {
                 capacity *= 2;
@@ -424,16 +388,15 @@ int processes_list(void) {
             }
         }
     }
-    
-    // int size = sizeof(process_list)/sizeof(process_list[0]);
-    // printf("size is: %d\n", size);
 
     qsort(process_list, n, sizeof(process_list[0]), compare_sort);
 
     struct timespec interval;
-    interval.tv_sec = 0;
-    interval.tv_nsec = 250000000;
+    interval.tv_sec = 1;
+    interval.tv_nsec = 0;
     nanosleep(&interval, NULL);   
+    long ticks = sysconf(_SC_CLK_TCK);
+    double elapsed = interval.tv_sec + interval.tv_nsec / 1e9;
 
     rewinddir(pDir);
     while ((pDirent = readdir(pDir)) != NULL) {
@@ -467,18 +430,20 @@ int processes_list(void) {
                     }                    
                 }
             } 
-            // printf("check: %d %d %d %d\n", item->stime1, item->stime2, item->utime1, item->utime2);
-            item->proc_cpu_usage = (item->utime2 + item->stime2) - (item->utime1 + item->stime1); 
+                        
+            item->proc_cpu_usage = ((item->utime2 + item->stime2) - (item->utime1 + item->stime1))/(elapsed*ticks)*100; 
             fclose(fptr); 
         }
     }    
-    closedir(pDir);    
+    closedir(pDir);  
 
-    for (int i = 0; i <= n; i++) {
+    qsort(process_list, n, sizeof(process_list[0]), compare_sort_cpu);  
+
+    for (int i = n; i >= (n-10); i--) {
         if (process_list[i].vsize > 0) {
             ValConv struct_vsize = readable_values(process_list[i].vsize*1024);
             ValConv struct_rss = readable_values(process_list[i].rss*1024);
-            printf("%d:%s %c %.2f%s/%.2f%s %d\n", 
+            printf("%d:%s %c %.2f%s/%.2f%s %d%%\n", 
                     process_list[i].pid, 
                     process_list[i].name, 
                     process_list[i].state,
@@ -504,44 +469,18 @@ int compare_sort(const void *a, const void *b) {
     return pA->pid - pB->pid;
 }
 
+int compare_sort_cpu(const void *a, const void *b) {
+    const Process *pA = a;
+    const Process *pB = b;
+    return pA->proc_cpu_usage - pB->proc_cpu_usage;
+}
+
 int compare_search(const void* a, const void* b) {
     // return (*(int*)a - *(int*)b);
-    // printf("check\n");
     const pid_t *key = (const pid_t *)a;
     const Process *elem = (const Process *)b;
-    // printf("check: %d %d \n", *key, elem->pid);
     if (*key > elem->pid) return 1;
     if (*key < elem->pid) return -1;
     return 0;
 }
 
-// void utime_stime_read(void) {
-//     FILE *fptr;
-//     char path_pid[300];
-//     char buff[128] = {0};
-//     int utime_snp = 0;
-//     int stime_snp = 0;
-//     snprintf(path_pid, 300, "/proc/%s/stat", pDirent->d_name);            
-//     fptr = fopen(path_pid, "r");
-//     fgets(buff, 128, fptr);
-//     buff[strcspn(buff, "\n")] = '\0';
-//     char *p = NULL;
-//     for (int i = 0; buff[i] != '\0'; i++) {
-//         if (buff[i] == ')') {
-//             p = buff + i + 2;
-//             break;
-//         }
-//     }
-//     int n = 1;
-//     char *p2 = strtok(p2, " ");
-//     while (p2 != NULL) {
-//         p2 = strtok(NULL, " ");
-//         n++;
-//         if (n == 12) utime_snp = atoi(p2);
-//         if (n == 13) {
-//             stime_snp = atoi(p2);
-//             break;
-//         }
-//     }
-//     fclose(fptr);
-// }
