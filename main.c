@@ -50,6 +50,7 @@ int sort_procs(Process *snap, int n, int (*cmp)(const void *, const void *));
 int compare_sort(const void *a, const void *b);
 int compare_sort_cpu(const void *a, const void *b);
 int compare_search(const void* a, const void* b);
+void print_proc_stats(Process *snap, int n, unsigned long MemTotal);
 
 Process *process_list = NULL;
 
@@ -316,7 +317,6 @@ int processes_list(unsigned long MemTotal) {
     Process *item;
 
     sort_procs(snap1, n, compare_sort);
-    // qsort(snap1, n, sizeof(snap1[0]), compare_sort);
     
     struct timespec interval;
     interval.tv_sec = 1;
@@ -334,32 +334,32 @@ int processes_list(unsigned long MemTotal) {
         snap2[i].proc_cpu_usage = ((snap2[i].utime + snap2[i].stime) - (item->utime + item->stime))/(elapsed*ticks)*100;
     }
 
-    sort_procs(snap2, n, compare_sort_cpu);
-    // qsort(snap2, n2, sizeof(snap2[0]), compare_sort_cpu); 
+    sort_procs(snap2, n2, compare_sort_cpu);
 
-    for (int i = n; i >= (n2-10); i--) {
-        if (snap2[i].vsize > 0) {
-            ValConv struct_vsize = readable_values(snap2[i].vsize*1024);
-            ValConv struct_rss = readable_values(snap2[i].rss*1024);
-            // printf("%ld\n", MemTotal);
-            double mem_usage = ((double)snap2[i].rss/MemTotal)*100;
-            printf("%d:%s %c %.2f%s/%.2f%s cpu:%d%% mem:%.2f%%\n", 
-                    snap2[i].pid, 
-                    snap2[i].name, 
-                    snap2[i].state,
-                    struct_vsize.conv_val, 
-                    struct_vsize.unit_conv, 
-                    struct_rss.conv_val, 
-                    struct_rss.unit_conv, 
-                    snap2[i].proc_cpu_usage,
-                    mem_usage);
-        }
-        else (printf("%d:%s %c %d\n", 
-                    snap2[i].pid, 
-                    snap2[i].name, 
-                    snap2[i].state, 
-                    snap2[i].proc_cpu_usage));
-    }
+    print_proc_stats(snap2, n2, MemTotal);
+
+    // for (int i = n2; i >= (n2-10); i--) {
+    //     if (snap2[i].vsize > 0) {
+    //         ValConv struct_vsize = readable_values(snap2[i].vsize*1024);
+    //         ValConv struct_rss = readable_values(snap2[i].rss*1024);
+    //         double mem_usage = ((double)snap2[i].rss/MemTotal)*100;
+    //         printf("%d:%s %c %.2f%s/%.2f%s cpu:%d%% mem:%.2f%%\n", 
+    //                 snap2[i].pid, 
+    //                 snap2[i].name, 
+    //                 snap2[i].state,
+    //                 struct_vsize.conv_val, 
+    //                 struct_vsize.unit_conv, 
+    //                 struct_rss.conv_val, 
+    //                 struct_rss.unit_conv, 
+    //                 snap2[i].proc_cpu_usage,
+    //                 mem_usage);
+    //     }
+    //     else (printf("%d:%s %c %d\n", 
+    //                 snap2[i].pid, 
+    //                 snap2[i].name, 
+    //                 snap2[i].state, 
+    //                 snap2[i].proc_cpu_usage));
+    // }
     return 0;
 }
 
@@ -462,3 +462,27 @@ int compare_search(const void* a, const void* b) {
     return 0;
 }
 
+void print_proc_stats(Process *snap, int n, unsigned long MemTotal) {
+    for (int i = n; i >= (n-10); i--) {
+        if (snap[i].vsize > 0) {
+            ValConv struct_vsize = readable_values(snap[i].vsize*1024);
+            ValConv struct_rss = readable_values(snap[i].rss*1024);
+            double mem_usage = ((double)snap[i].rss/MemTotal)*100;
+            printf("%d:%s %c %.2f%s/%.2f%s cpu:%d%% mem:%.2f%%\n", 
+                    snap[i].pid, 
+                    snap[i].name, 
+                    snap[i].state,
+                    struct_vsize.conv_val, 
+                    struct_vsize.unit_conv, 
+                    struct_rss.conv_val, 
+                    struct_rss.unit_conv, 
+                    snap[i].proc_cpu_usage,
+                    mem_usage);
+        }
+        else (printf("%d:%s %c %d\n", 
+                    snap[i].pid, 
+                    snap[i].name, 
+                    snap[i].state, 
+                    snap[i].proc_cpu_usage));
+    }
+}
