@@ -46,6 +46,7 @@ Speed network_stats(void);
 void ntwrk_spd_calc(void);
 int processes_list(unsigned long MemTotal);
 int take_proc_snapshot(Process *snap, int max_procs);
+int sort_procs(Process *snap, int n, int (*cmp)(const void *, const void *));
 int compare_sort(const void *a, const void *b);
 int compare_sort_cpu(const void *a, const void *b);
 int compare_search(const void* a, const void* b);
@@ -312,77 +313,10 @@ int processes_list(unsigned long MemTotal) {
     Process snap1[MAX_PROCS];
     int n = take_proc_snapshot(snap1, MAX_PROCS);
 
-    // struct dirent *pDirent;
-    // DIR *pDir;
-    // pDir = opendir("/proc");
-    // if (pDir == NULL) {
-    //     printf("Cannot open directory /proc");
-    //     return 1;
-    // }
-    // int n = 0;       
-    // int capacity = 128;
-    // process_list = malloc(capacity * sizeof(Process));
-    // FILE *fptr;
-    // char path_pid[300];
-    // char comm_name[50];
-    // char buff[128] = {0};
     Process *item;
 
-    // while ((pDirent = readdir(pDir)) != NULL) {
-    //     if (isdigit(pDirent->d_name[0])) {
-    //         process_list[n].pid = atoi(pDirent->d_name);
-    //         snprintf(path_pid, 300, "/proc/%s/status", pDirent->d_name);            
-    //         fptr = fopen(path_pid, "r");
-    //         char *p = NULL;
-    //         while (fgets(buff, 128, fptr)) {
-    //             if (strncmp("Name", buff, 4) == 0) {
-    //                 p = buff + 6;
-    //                 strcpy(process_list[n].name, p);
-    //                 process_list[n].name[strcspn(process_list[n].name, "\n")] = '\0';
-    //             }
-    //             if (strncmp("State", buff, 5) == 0) {
-    //                 process_list[n].state = buff[7];
-    //             }
-    //             if (strncmp("VmSize", buff, 6) == 0) {
-    //                 sscanf(buff, "VmSize: %d", &process_list[n].vsize);
-    //             }
-    //             if (strncmp("VmRSS", buff, 5) == 0) {
-    //                 sscanf(buff, "VmRSS: %d", &process_list[n].rss);
-    //                 break;                    
-    //             }                
-    //         }
-    //         fclose(fptr);     
-    //         snprintf(path_pid, 300, "/proc/%s/stat", pDirent->d_name);            
-    //         fptr = fopen(path_pid, "r");
-    //         fgets(buff, 128, fptr);
-    //         buff[strcspn(buff, "\n")] = '\0';          
-    //         char *p2 = NULL;
-    //         for (int i = 0; buff[i] != '\0'; i++) {
-    //             if (buff[i] == ')') {
-    //                 p2 = buff + i + 2;
-    //                 break;
-    //             }
-    //         }
-    //         int n1 = 1;
-    //         char *p3 = strtok(p2, " ");
-    //         while (p3 != NULL) {
-    //             p3 = strtok(NULL, " ");
-    //             n1++;
-    //             if (n1 == 12) process_list[n].utime1 = atoi(p3);
-    //             if (n1 == 13) {
-    //                 process_list[n].stime1 = atoi(p3);
-    //                 break;
-    //             }
-    //         }    
-    //         fclose(fptr);                  
-    //         if (++n >= capacity) {
-    //             capacity *= 2;
-    //             process_list = realloc(process_list, capacity * sizeof(Process));
-    //         }
-    //     }
-    // }
-
-    qsort(snap1, n, sizeof(snap1[0]), compare_sort);
+    sort_procs(snap1, n, compare_sort);
+    // qsort(snap1, n, sizeof(snap1[0]), compare_sort);
     
     struct timespec interval;
     interval.tv_sec = 1;
@@ -395,50 +329,13 @@ int processes_list(unsigned long MemTotal) {
     int n2 = take_proc_snapshot(snap2, MAX_PROCS);
     
     for (int i = 0; i < n2; i++) {
-        // pid_t key = atoi(snap2[i].name);
         pid_t key = snap2[i].pid;
-        // printf("%d\n", key);
         item = bsearch(&key, snap1, n, sizeof(snap1[0]), compare_search);
-        // printf("%d %d\n", snap2[i].utime, snap2[i].stime);
         snap2[i].proc_cpu_usage = ((snap2[i].utime + snap2[i].stime) - (item->utime + item->stime))/(elapsed*ticks)*100;
     }
-    
-    // rewinddir(pDir);
-    // while ((pDirent = readdir(pDir)) != NULL) {
-    //     if (isdigit(pDirent->d_name[0])) {
-    //         snprintf(path_pid, 300, "/proc/%s/stat", pDirent->d_name);            
-    //         fptr = fopen(path_pid, "r");
-    //         fgets(buff, 128, fptr);
-    //         buff[strcspn(buff, "\n")] = '\0';
-    //         pid_t key = atoi(pDirent->d_name);
-    //         item = bsearch(&key, process_list, n, sizeof(process_list[0]), compare_search);
-    //         char *p = NULL;
-    //         for (int i = 0; buff[i] != '\0'; i++) {
-    //             if (buff[i] == ')') {
-    //                 p = buff + i + 2;
-    //                 break;
-    //             }
-    //         }
-    //         int n1 = 1;
-    //         char *p2 = strtok(p, " ");
-    //         while (p2 != NULL) {
-    //             p2 = strtok(NULL, " ");
-    //             n1++;
-    //             if (item != NULL) {
-    //                 if (n1 == 12) item->utime2 = atoi(p2);
-    //                 if (n1 == 13) {
-    //                     item->stime2 = atoi(p2);                        
-    //                     break;
-    //                 }                    
-    //             }
-    //         }              
-    //         item->proc_cpu_usage = ((item->utime2 + item->stime2) - (item->utime1 + item->stime1))/(elapsed*ticks)*100; 
-    //         fclose(fptr); 
-    //     }
-    // }    
-    // closedir(pDir);  
 
-    qsort(snap2, n2, sizeof(snap2[0]), compare_sort_cpu); 
+    sort_procs(snap2, n, compare_sort_cpu);
+    // qsort(snap2, n2, sizeof(snap2[0]), compare_sort_cpu); 
 
     for (int i = n; i >= (n2-10); i--) {
         if (snap2[i].vsize > 0) {
@@ -534,13 +431,14 @@ int take_proc_snapshot(Process *snap, int max_procs) {
             }    
             fclose(fptr);    
             n++;
-            // if (++n >= capacity) {
-            //     capacity *= 2;
-            //     process_list = realloc(process_list, capacity * sizeof(Process));
-            // }
         }
     }
     return n;
+}
+
+int sort_procs(Process *snap, int n, int (*cmp)(const void *, const void *)) {
+    qsort(snap, n, sizeof(snap[0]), cmp);
+    return 0;
 }
 
 int compare_sort(const void *a, const void *b) {
