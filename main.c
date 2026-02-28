@@ -6,6 +6,7 @@
 #include <sys/statvfs.h>
 #include <dirent.h>
 #include <time.h>
+#include <stdbool.h>
 
 #define token_number 11
 #define token_size 10
@@ -57,13 +58,30 @@ Process *process_list = NULL;
 int main(void) {
     unsigned long MemTotal;
 
-    cpu_usage_calc();
-    read_meminfo(&MemTotal);
-    disk_usage();
-    network_stats();
-    ntwrk_spd_calc();
+    // printf("\x1b[?1049h");
 
-    processes_list(MemTotal);
+    // while(true) {
+
+    //     printf("\x1b[H");
+
+    //     // cpu_usage_calc();
+    //     read_meminfo(&MemTotal);
+    //     disk_usage();
+    //     network_stats();
+    //     // ntwrk_spd_calc();
+    //     printf("\n");
+    //     // processes_list(MemTotal);
+
+    //     fflush(stdout);
+    //     sleep(1);
+    // }
+
+    cpu_usage_calc();
+    // read_meminfo(&MemTotal);
+    // disk_usage();
+    // network_stats();
+    // ntwrk_spd_calc();
+    // processes_list(MemTotal);
 
     return 0;
 }
@@ -100,25 +118,49 @@ unsigned long* read_cpu_snapshot(void) {
     buff[strcspn(buff, "\n")] = '\0';
     fclose(fptr);
 
-    char token[token_number][token_size];
     int n = 0;
-    int m = 0;
-    for (int i = 5; buff[i] != '\0'; i++) {
+    static unsigned long token[token_number];
+    char *p = buff;
+    int i = 0;
+    while(true) {
         if (buff[i] == ' ') {
-            i++;
-            n++;
-            m = 0;
+            while(buff[i] == ' ') {
+                i++;
+            }
+            break;
         }
-        token[n][m++] = buff[i];
+        i++;    
     }
-
-    static unsigned long token_int[token_number];
-
-    for (int i = 0; i <= n; i++) {
-        token_int[i] = strtoul(token[i], NULL, 10);
+    p += i;
+    
+    while(*p != '\0') {        
+        token[n++] = strtoul(p, &p, 10);
     }
+    // for (int i = 0; i <= n; i++) {
+    //     printf("%ld ", token[i]);
+    // }
+    // printf("\n");
 
-    return token_int;
+    // char token[token_number][token_size];
+    // int n = 0;
+    // int m = 0;
+    // for (int i = 5; buff[i] != '\0'; i++) {
+    //     if (buff[i] == ' ') {
+    //         i++;
+    //         n++;
+    //         m = 0;
+    //     }
+    //     token[n][m++] = buff[i];
+    // }
+
+
+    // static unsigned long token_int[token_number];
+
+    // for (int i = 0; i <= n; i++) {
+    //     token_int[i] = strtoul(token[i], NULL, 10);
+    // }
+
+    return token;
 }
 
 void read_meminfo(unsigned long *MemTotal) {
@@ -312,9 +354,7 @@ void ntwrk_spd_calc(void) {
 int processes_list(unsigned long MemTotal) {
     
     Process snap1[MAX_PROCS];
-    int n = take_proc_snapshot(snap1, MAX_PROCS);
-
-    Process *item;
+    int n = take_proc_snapshot(snap1, MAX_PROCS);    
 
     sort_procs(snap1, n, compare_sort);
     
@@ -327,6 +367,8 @@ int processes_list(unsigned long MemTotal) {
     
     Process snap2[MAX_PROCS];
     int n2 = take_proc_snapshot(snap2, MAX_PROCS);
+
+    Process *item;
     
     for (int i = 0; i < n2; i++) {
         pid_t key = snap2[i].pid;
@@ -338,28 +380,6 @@ int processes_list(unsigned long MemTotal) {
 
     print_proc_stats(snap2, n2, MemTotal);
 
-    // for (int i = n2; i >= (n2-10); i--) {
-    //     if (snap2[i].vsize > 0) {
-    //         ValConv struct_vsize = readable_values(snap2[i].vsize*1024);
-    //         ValConv struct_rss = readable_values(snap2[i].rss*1024);
-    //         double mem_usage = ((double)snap2[i].rss/MemTotal)*100;
-    //         printf("%d:%s %c %.2f%s/%.2f%s cpu:%d%% mem:%.2f%%\n", 
-    //                 snap2[i].pid, 
-    //                 snap2[i].name, 
-    //                 snap2[i].state,
-    //                 struct_vsize.conv_val, 
-    //                 struct_vsize.unit_conv, 
-    //                 struct_rss.conv_val, 
-    //                 struct_rss.unit_conv, 
-    //                 snap2[i].proc_cpu_usage,
-    //                 mem_usage);
-    //     }
-    //     else (printf("%d:%s %c %d\n", 
-    //                 snap2[i].pid, 
-    //                 snap2[i].name, 
-    //                 snap2[i].state, 
-    //                 snap2[i].proc_cpu_usage));
-    // }
     return 0;
 }
 
@@ -436,6 +456,25 @@ int take_proc_snapshot(Process *snap, int max_procs) {
     return n;
 }
 
+int insertion_sort(Process *snap, int n) {
+    int temp;
+    int position;
+    for (int i = 0; i < n; i++) {
+        if (snap[i].pid < snap[i+1].pid) continue;
+        else {
+            temp = snap[i].pid;
+            position = i - 1;
+            while (snap[i].pid < snap[position].pid) {
+                snap[position+1].pid = snap[position].pid;
+                position--;
+            }
+            snap[position].pid = snap[i].pid;
+        }
+    }
+
+    return 0;
+}
+
 int sort_procs(Process *snap, int n, int (*cmp)(const void *, const void *)) {
     qsort(snap, n, sizeof(snap[0]), cmp);
     return 0;
@@ -463,7 +502,7 @@ int compare_search(const void* a, const void* b) {
 }
 
 void print_proc_stats(Process *snap, int n, unsigned long MemTotal) {
-    for (int i = n; i >= (n-10); i--) {
+    for (int i = n-1; i >= (n-10); i--) {
         if (snap[i].vsize > 0) {
             ValConv struct_vsize = readable_values(snap[i].vsize*1024);
             ValConv struct_rss = readable_values(snap[i].rss*1024);
