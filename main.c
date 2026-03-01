@@ -122,43 +122,15 @@ unsigned long* read_cpu_snapshot(void) {
     static unsigned long token[token_number];
     char *p = buff;
     int i = 0;
-    while(true) {
-        if (buff[i] == ' ') {
-            while(buff[i] == ' ') {
-                i++;
-            }
-            break;
-        }
-        i++;    
-    }
+
+    while (!isdigit(buff[i])) {
+        i++;
+    };
     p += i;
     
-    while(*p != '\0') {        
+    while (*p != '\0') {        
         token[n++] = strtoul(p, &p, 10);
     }
-    // for (int i = 0; i <= n; i++) {
-    //     printf("%ld ", token[i]);
-    // }
-    // printf("\n");
-
-    // char token[token_number][token_size];
-    // int n = 0;
-    // int m = 0;
-    // for (int i = 5; buff[i] != '\0'; i++) {
-    //     if (buff[i] == ' ') {
-    //         i++;
-    //         n++;
-    //         m = 0;
-    //     }
-    //     token[n][m++] = buff[i];
-    // }
-
-
-    // static unsigned long token_int[token_number];
-
-    // for (int i = 0; i <= n; i++) {
-    //     token_int[i] = strtoul(token[i], NULL, 10);
-    // }
 
     return token;
 }
