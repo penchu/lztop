@@ -24,6 +24,8 @@ typedef struct {
     unsigned long TXb;
     unsigned long TXe;
     unsigned long TXp;
+    ValConv rxr_conv;
+    ValConv txr_conv;
 } Speed;
 
 typedef struct {
@@ -38,13 +40,13 @@ typedef struct {
 } Process;
 
 void cpu_usage_calc(void);
-unsigned long* read_cpu_snapshot(void);
+unsigned long *read_cpu_snapshot(void);
 void read_meminfo(unsigned long *MemTotal);
 ValConv readable_values(unsigned long value);
 void disk_usage(void);
 int disk_usage_calc(char *path);
 Speed network_stats(void);
-void ntwrk_spd_calc(void);
+Speed ntwrk_spd_calc(void);
 int processes_list(unsigned long MemTotal);
 int take_proc_snapshot(Process *snap, int max_procs);
 int sort_procs(Process *snap, int n, int (*cmp)(const void *, const void *));
@@ -58,25 +60,36 @@ Process *process_list = NULL;
 int main(void) {
     unsigned long MemTotal;
 
-    // printf("\x1b[?1049h");
+    printf("\x1b[H");
+    printf("\x1b[?1049h");
 
-    // while(true) {
+    while(true) {
 
-    //     printf("\x1b[H");
+        printf("\x1b[2J");
+        printf("\x1b[H");
 
-    //     // cpu_usage_calc();
-    //     read_meminfo(&MemTotal);
-    //     disk_usage();
-    //     network_stats();
-    //     // ntwrk_spd_calc();
-    //     printf("\n");
-    //     // processes_list(MemTotal);
+        // printf("-------------------------------\n");
+        cpu_usage_calc();
+        read_meminfo(&MemTotal);
+        disk_usage();
+        network_stats();
 
-    //     fflush(stdout);
-    //     sleep(1);
-    // }
+        Speed s_main = ntwrk_spd_calc();
+        // printf("Download: %.2f%s/s, Upload: %.2f%s/s\n", rxr_conv.conv_val, rxr_conv.unit_conv, txr_conv.conv_val, txr_conv.unit_conv); 
+        printf("Download: %.2f%s/s, Upload: %.2f%s/s\n", 
+                s_main.rxr_conv.conv_val,
+                s_main.rxr_conv.unit_conv,
+                s_main.txr_conv.conv_val,
+                s_main.txr_conv.unit_conv);
 
-    cpu_usage_calc();
+        // printf("-------------------------------\n");
+        // processes_list(MemTotal);
+
+        fflush(stdout);
+        sleep(1);
+    }
+
+    // cpu_usage_calc();
     // read_meminfo(&MemTotal);
     // disk_usage();
     // network_stats();
@@ -87,11 +100,11 @@ int main(void) {
 }
 
 void cpu_usage_calc(void) {
-    unsigned long* cpu_snapshot = read_cpu_snapshot();
+    unsigned long *cpu_snapshot = read_cpu_snapshot();
     
     unsigned long stored_cpu_snapshot[100] = {0};
 
-    for (int i = 0; cpu_snapshot[i] != '\0'; i++) {
+    for (int i = 0; i <= 9; i++) {
         stored_cpu_snapshot[i] = cpu_snapshot[i];        
     }
     sleep(1);
@@ -99,17 +112,20 @@ void cpu_usage_calc(void) {
 
     unsigned long total_active = 0;
     unsigned long total_idle = 0;
-    for (int i = 0; i <= 3; i++) {
+    for (int i = 0; i <= 7; i++) {
         total_active += (cpu_snapshot[i] - stored_cpu_snapshot[i]);
     }
-    total_idle = (cpu_snapshot[3] - stored_cpu_snapshot[3]);
+    total_idle = (cpu_snapshot[3] - stored_cpu_snapshot[3]) + (cpu_snapshot[4] - stored_cpu_snapshot[4]);
 
     float cpu_usage = (((double)total_active - (double)total_idle)/(double)total_active)*100;
 
     printf("CPU usage is: %.2f%%\n", cpu_usage);
+
+    stored_cpu_snapshot[0] = '\0';
+    cpu_snapshot[0] = '\0';
 }
 
-unsigned long* read_cpu_snapshot(void) {
+unsigned long *read_cpu_snapshot(void) {
     FILE *fptr;
     fptr = fopen("/proc/stat", "r");
     size_t buff_size = 128;    
@@ -295,14 +311,14 @@ Speed network_stats(void) {
     return s1;
 }
 
-void ntwrk_spd_calc(void) {
+Speed ntwrk_spd_calc(void) {
 
     Speed s1 = network_stats();
-    unsigned long rx1 = s1.RXb;
-    unsigned long tx1 = s1.TXb;
+    // unsigned long rx1 = s1.RXb;
+    // unsigned long tx1 = s1.TXb;
 
-    ValConv rx_bytes_conv = readable_values(rx1);
-    ValConv tx_bytes_conv = readable_values(tx1);
+    ValConv rx_bytes_conv = readable_values(s1.RXb);
+    ValConv tx_bytes_conv = readable_values(s1.TXb);
 
     printf("Network (enp5s0):\nRX: %.2f%s, %ld packets, %ld errors\nTX: %.2f%s, %ld packets, %ld errors\n",
             rx_bytes_conv.conv_val, rx_bytes_conv.unit_conv, s1.RXp, s1.RXe, tx_bytes_conv.conv_val, 
@@ -310,17 +326,21 @@ void ntwrk_spd_calc(void) {
 
     sleep(1);
     Speed s2 = network_stats();
-    unsigned long rx2 = s2.RXb;
-    unsigned long tx2 = s2.TXb;
+    // unsigned long rx2 = s2.RXb;
+    // unsigned long tx2 = s2.TXb;
+    // unsigned long rx_rate = s2.RXb - s1.RXb;
+    // unsigned long tx_rate = s2.TXb - s1.TXb;
 
-    unsigned long rx_rate = s2.RXb - s1.RXb;
-    unsigned long tx_rate = s2.TXb - s1.TXb;
+    // ValConv rxr_conv = readable_values(s2.RXb - s1.RXb);
+    // ValConv txr_conv = readable_values(s2.TXb - s1.TXb);
 
-    ValConv rxr_conv = readable_values(rx_rate);
-    ValConv txr_conv = readable_values(tx_rate);
+    s1.rxr_conv = readable_values(s2.RXb - s1.RXb);
+    s1.txr_conv = readable_values(s2.TXb - s1.TXb);
+    return s1;
 
-    printf("Download: %.2f%s/s, Upload: %.2f%s/s\n", rxr_conv.conv_val, rxr_conv.unit_conv, txr_conv.conv_val, txr_conv.unit_conv); 
+    // printf("Download: %.2f%s/s, Upload: %.2f%s/s\n", rxr_conv.conv_val, rxr_conv.unit_conv, txr_conv.conv_val, txr_conv.unit_conv); 
         
+    
 }
 
 int processes_list(unsigned long MemTotal) {
@@ -351,6 +371,9 @@ int processes_list(unsigned long MemTotal) {
     sort_procs(snap2, n2, compare_sort_cpu);
 
     print_proc_stats(snap2, n2, MemTotal);
+
+    memset(&snap1, 0, sizeof(snap1));
+    memset(&snap2, 0, sizeof(snap2));
 
     return 0;
 }
