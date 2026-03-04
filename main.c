@@ -274,23 +274,40 @@ Speed network_stats(void) {
 
     char *endptr;
     unsigned long token[20];
-    int i;
+    int i = 0;
     int pos = 6;
-    char *ptr = buff;
+    char *ptr;
 
     while (fgets(buff, buff_size, fptr) != NULL) {
         // if (strstr(buff, "enp5s0")) {
         if (strncmp(buff, "enp5s0:", 7) == 0) {
+            buff[strcspn(buff, "\n")] = '\0';
+
+            // while(buff[i++] != '\0') printf("%d ", buff[i]);
+            // printf("\n");
+            
             while (!isdigit(buff[pos])) pos++;
-            ptr += pos;
-            token[i] = strtoul(ptr, &endptr, 10);
-            i++;
-            printf("token: %ln\n", token);
+            ptr = buff + pos;
+            // printf("%s \n", ptr);
+
+            while (*ptr != '\0') {
+                while (*ptr == ' ') ptr++;
+                token[i++] = strtoul(ptr, &ptr, 10);
+                // printf("token: %ld i: %d\n", token[i], i);
+                // i++;      
+                // if (i == 20) break;         
+            }
+            // token[i] = strtoul(ptr, &endptr, 10);
+            // i++;
+            // printf("token: %ln\n", token);
             // for (int i = 8; buff[i] != '\0'; i++) {
             //     p[n++] = buff[i];
             // }             
         }
     }
+    // for (int i = 0; token[i] != '\0'; i++) {
+    //     printf("token: %ln\n", token);
+    // }
 
     // printf("token: %s\n", token);
     
