@@ -50,60 +50,60 @@ int compare_sort(const void *a, const void *b);
 int compare_sort_cpu(const void *a, const void *b);
 int compare_search(const void* a, const void* b);
 void print_proc_stats(Process *snap, int n, unsigned long MemTotal);
+void collecting_data(void);
+void printing_data(void);
 
 Process *process_list = NULL;
 
 int main(void) {
     unsigned long MemTotal;
 
-    // printf("\x1b[H");
-    // printf("\x1b[?1049h");
+    printf("\x1b[H");
+    printf("\x1b[?1049h");
 
-    // while(true) {
+    while(true) {
 
-    //     printf("\x1b[2J");
-    //     printf("\x1b[H");
+        printf("\x1b[2J");
+        printf("\x1b[H");
 
-    //     // printf("-------------------------------\n");
-    //     cpu_usage_calc();
-    //     read_meminfo(&MemTotal);
-    //     disk_usage();
-    //     network_stats(); // or ntwrk_spd_calc();
+        collecting_data();
+        printing_data();
 
-    //     Speed s_main = ntwrk_spd_calc();
+        // printf("-------------------------------\n");
+        // cpu_usage_calc();
+        // read_meminfo(&MemTotal);
+        // disk_usage();
+        // ntwrk_spd_calc();
 
-    //     ValConv rx_bytes_conv = readable_values(s_main.RXb);
-    //     ValConv tx_bytes_conv = readable_values(s_main.TXb);
+        // Speed s_main = ntwrk_spd_calc();
+        // ValConv rx_bytes_conv = readable_values(s_main.RXb);
+        // ValConv tx_bytes_conv = readable_values(s_main.TXb);
+        // printf("Network (enp5s0):\nRX: %.2f%s, %ld packets\nTX: %.2f%s, %ld packets\n",
+        //         rx_bytes_conv.conv_val, 
+        //         rx_bytes_conv.unit_conv, 
+        //         s_main.RXp, 
+        //         tx_bytes_conv.conv_val, 
+        //         tx_bytes_conv.unit_conv, 
+        //         s_main.TXp);    
+        // printf("Download: %.2f%s/s, Upload: %.2f%s/s\n", 
+        //         s_main.rxr_conv.conv_val,
+        //         s_main.rxr_conv.unit_conv,
+        //         s_main.txr_conv.conv_val,
+        //         s_main.txr_conv.unit_conv);
 
-    //     printf("Network (enp5s0):\nRX: %.2f%s, %ld packets, %ld errors\nTX: %.2f%s, %ld packets, %ld errors\n",
-    //             rx_bytes_conv.conv_val, 
-    //             rx_bytes_conv.unit_conv, 
-    //             s_main.RXp, 
-    //             s_main.RXe, 
-    //             tx_bytes_conv.conv_val, 
-    //             tx_bytes_conv.unit_conv, 
-    //             s_main.TXp, 
-    //             s_main.TXe);        
-        
-    //     // printf("Download: %.2f%s/s, Upload: %.2f%s/s\n", 
-    //     //         s_main.rxr_conv.conv_val,
-    //     //         s_main.rxr_conv.unit_conv,
-    //     //         s_main.txr_conv.conv_val,
-    //     //         s_main.txr_conv.unit_conv);
+        // printf("-------------------------------\n");
+        // processes_list(MemTotal);
 
-    //     // printf("-------------------------------\n");
-    //     // processes_list(MemTotal);
+        fflush(stdout);
+        sleep(1);
+    }
 
-    //     fflush(stdout);
-    //     sleep(1);
-    // }
-
-    cpu_usage_calc();
-    read_meminfo(&MemTotal);
-    disk_usage();
-    // network_stats(); //probably needs to be deleted as the next function is calling this
-    ntwrk_spd_calc();
-    // processes_list(MemTotal);
+    // cpu_usage_calc();
+    // read_meminfo(&MemTotal);
+    // disk_usage();
+    // // network_stats(); //probably needs to be deleted as the next function is calling this
+    // ntwrk_spd_calc();
+    // // processes_list(MemTotal);
 
     return 0;
 }
@@ -279,49 +279,24 @@ Speed network_stats(void) {
     char *ptr;
 
     while (fgets(buff, buff_size, fptr) != NULL) {
-        // if (strstr(buff, "enp5s0")) {
         if (strncmp(buff, "enp5s0:", 7) == 0) {
-            buff[strcspn(buff, "\n")] = '\0';
-
-            // while(buff[i++] != '\0') printf("%d ", buff[i]);
-            // printf("\n");
+            buff[strcspn(buff, "\n")] = '\0'; // not sure if needed
             
             while (!isdigit(buff[pos])) pos++;
             ptr = buff + pos;
-            // printf("%s \n", ptr);
 
             while (*ptr != '\0') {
                 while (*ptr == ' ') ptr++;
-                token[i++] = strtoul(ptr, &ptr, 10);
-                // printf("token: %ld i: %d\n", token[i], i);
-                // i++;      
-                // if (i == 20) break;         
-            }
-            // token[i] = strtoul(ptr, &endptr, 10);
-            // i++;
-            // printf("token: %ln\n", token);
-            // for (int i = 8; buff[i] != '\0'; i++) {
-            //     p[n++] = buff[i];
-            // }             
+                token[i++] = strtoul(ptr, &ptr, 10);     
+            }            
         }
-    }
-    // for (int i = 0; token[i] != '\0'; i++) {
-    //     printf("token: %ln\n", token);
-    // }
-
-    // printf("token: %s\n", token);
-    
+    }    
     fclose(fptr);
-    
-    // int i = 0;
-    // long token[20];
-    // char *myPtr = strtok(p, " ");
-    // while (myPtr != NULL) {
-    //     if (myPtr != 0) {
-    //         token[i++] = strtol(myPtr, NULL, 10);
-    //     }
-    //     myPtr = strtok(NULL, " ");
-    // } 
+
+    // for (int i = 0; i <= 15; i++) {
+    //     printf("%ld ", token[i]);
+    // }
+    // printf("\n");
 
     Speed s1;
     s1.RXb = token[0];
@@ -333,37 +308,29 @@ Speed network_stats(void) {
 
 Speed ntwrk_spd_calc(void) {
     Speed s1 = network_stats();
-    // unsigned long rx1 = s1.RXb;
-    // unsigned long tx1 = s1.TXb;
 
     ValConv rx_bytes_conv = readable_values(s1.RXb);
     ValConv tx_bytes_conv = readable_values(s1.TXb);
 
-    // printf("Network (enp5s0):\nRX: %.2f%s, %ld packets, \nTX: %.2f%s, %ld packets\n",
-    //         rx_bytes_conv.conv_val, 
-    //         rx_bytes_conv.unit_conv, 
-    //         s1.RXp, 
-    //         tx_bytes_conv.conv_val, 
-    //         tx_bytes_conv.unit_conv, 
-    //         s1.TXp);
+    printf("Network (enp5s0):\nRX: %.2f%s, %ld packets, \nTX: %.2f%s, %ld packets\n",
+            rx_bytes_conv.conv_val, 
+            rx_bytes_conv.unit_conv, 
+            s1.RXp, 
+            tx_bytes_conv.conv_val, 
+            tx_bytes_conv.unit_conv, 
+            s1.TXp);
 
     sleep(1);
     Speed s2 = network_stats();
-    // unsigned long rx2 = s2.RXb;
-    // unsigned long tx2 = s2.TXb;
-    // unsigned long rx_rate = s2.RXb - s1.RXb;
-    // unsigned long tx_rate = s2.TXb - s1.TXb;
-    // ValConv rxr_conv = readable_values(s2.RXb - s1.RXb);
-    // ValConv txr_conv = readable_values(s2.TXb - s1.TXb);
 
-    // s1.rxr_conv = readable_values(s2.RXb - s1.RXb);
-    // s1.txr_conv = readable_values(s2.TXb - s1.TXb);    
+    ValConv rx_r_conv = readable_values(s2.RXb - s1.RXb);
+    ValConv tx_r_conv = readable_values(s2.TXb - s1.TXb);    
 
-    // printf("Download: %.2f%s/s, Upload: %.2f%s/s\n", 
-    //         s1.rxr_conv.conv_val, 
-    //         s1.rxr_conv.unit_conv, 
-    //         s1.txr_conv.conv_val, 
-    //         s1.txr_conv.unit_conv);        
+    printf("Download: %.2f%s/s, Upload: %.2f%s/s\n", 
+            rx_r_conv.conv_val, 
+            rx_r_conv.unit_conv, 
+            tx_r_conv.conv_val, 
+            tx_r_conv.unit_conv);        
 
     return s1;
 }
