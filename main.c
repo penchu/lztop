@@ -11,6 +11,7 @@
 #define token_number 11
 #define token_size 10
 #define MAX_PROCS 512
+#define NUM_DISKS 2
 
 typedef struct {
     float conv_val;
@@ -35,12 +36,25 @@ typedef struct {
    int stime;
 } Process;
 
-void cpu_usage_calc(void);
+typedef struct {
+    float cpu_usage;
+    unsigned long MemAvailable;
+    unsigned long disc_free;
+    unsigned long disc_total;
+} Big_data;
+
+typedef struct {
+    char path[64];
+    unsigned long disc_free;
+    unsigned long disc_total;
+} DiskStats;
+
+void cpu_usage_calc(Big_data *bd);
 unsigned long *read_cpu_snapshot(void);
-void read_meminfo(unsigned long *MemTotal);
+void read_meminfo(Big_data *bd, unsigned long *MemTotal);
 ValConv readable_values(unsigned long value);
-void disk_usage(void);
-int disk_usage_calc(char *path);
+// void disk_usage(char *path, Big_data *bd);
+int disk_usage_calc(char *path, Big_data *bd, DiskStats disks[]);
 Speed network_stats(void);
 Speed ntwrk_spd_calc(void);
 int processes_list(unsigned long MemTotal);
@@ -50,13 +64,15 @@ int compare_sort(const void *a, const void *b);
 int compare_sort_cpu(const void *a, const void *b);
 int compare_search(const void* a, const void* b);
 void print_proc_stats(Process *snap, int n, unsigned long MemTotal);
-void collecting_data(void);
-void printing_data(void);
+void collecting_data(Big_data *bd, unsigned long *MemTotal, DiskStats disks[]);
+void printing_data(Big_data *bd, unsigned long MemTotal, DiskStats disks[]);
 
 Process *process_list = NULL;
 
 int main(void) {
     unsigned long MemTotal;
+    Big_data bd = {0};
+    DiskStats disks[NUM_DISKS];
 
     printf("\x1b[H");
     printf("\x1b[?1049h");
@@ -66,8 +82,9 @@ int main(void) {
         printf("\x1b[2J");
         printf("\x1b[H");
 
-        collecting_data();
-        printing_data();
+        // Big_data bd = collecting_data();
+        collecting_data(&bd, &MemTotal, disks);
+        printing_data(&bd, MemTotal, disks);
 
         // printf("-------------------------------\n");
         // cpu_usage_calc();
@@ -108,7 +125,7 @@ int main(void) {
     return 0;
 }
 
-void cpu_usage_calc(void) {
+void cpu_usage_calc(Big_data *bd) {
     unsigned long *cpu_snapshot = read_cpu_snapshot();
     
     unsigned long stored_cpu_snapshot[100] = {0};
@@ -126,9 +143,10 @@ void cpu_usage_calc(void) {
     }
     total_idle = (cpu_snapshot[3] - stored_cpu_snapshot[3]) + (cpu_snapshot[4] - stored_cpu_snapshot[4]);
 
-    float cpu_usage = (((double)total_active - (double)total_idle)/(double)total_active)*100;
+    // float cpu_usage = (((double)total_active - (double)total_idle)/(double)total_active)*100;
+    // printf("CPU usage is: %.2f%%\n", cpu_usage);
 
-    printf("CPU usage is: %.2f%%\n", cpu_usage);
+    bd->cpu_usage = (((double)total_active - (double)total_idle)/(double)total_active)*100;
 
     stored_cpu_snapshot[0] = '\0';
     cpu_snapshot[0] = '\0';
@@ -160,7 +178,7 @@ unsigned long *read_cpu_snapshot(void) {
     return token;
 }
 
-void read_meminfo(unsigned long *MemTotal) {
+void read_meminfo(Big_data *bd, unsigned long *MemTotal) {
     FILE *fptr;
     fptr = fopen("/proc/meminfo", "r");
     size_t buff_size = 128;    
@@ -169,10 +187,9 @@ void read_meminfo(unsigned long *MemTotal) {
     char token_new[token_number];
     int n = 0;
     int m = 0;
-    // unsigned long MemTotal = 0;
-    unsigned long MemAvailable = 0;
-    unsigned long MemUsed = 0;
-    float MemUsage = 0; 
+    // unsigned long MemAvailable = 0;
+    // unsigned long MemUsed = 0;
+    // float MemUsage = 0; 
     char *p = NULL;
 
     while (fgets(buff, buff_size, fptr) != NULL) {
@@ -191,7 +208,8 @@ void read_meminfo(unsigned long *MemTotal) {
             p = buff;
             for (int i = 0; buff[i] != '\0'; i++) {
                 if (isdigit(buff[i])) {                    
-                    MemAvailable = strtol(p + i, NULL, 10);
+                    // MemAvailable = strtol(p + i, NULL, 10);
+                    bd->MemAvailable = strtol(p + i, NULL, 10);
                     break;
                 }
             }
@@ -201,13 +219,16 @@ void read_meminfo(unsigned long *MemTotal) {
     }
     fclose(fptr);
 
-    MemUsage = (((double)(*MemTotal) - (double)MemAvailable)/(double)(*MemTotal))*100;
-    MemUsed = *MemTotal - MemAvailable;
-
-    ValConv struct_used = readable_values(MemUsed*1024);
-    ValConv struct_total = readable_values(*MemTotal*1024);
-
-    printf("Memory usage is: %.2f%s/%.2f%s %.2f%%\n", struct_used.conv_val, struct_used.unit_conv, struct_total.conv_val, struct_total.unit_conv, MemUsage); 
+    // MemUsage = (((double)(*MemTotal) - (double)MemAvailable)/(double)(*MemTotal))*100;
+    // MemUsed = *MemTotal - MemAvailable;
+    // ValConv struct_used = readable_values(MemUsed*1024);
+    // ValConv struct_total = readable_values(*MemTotal*1024);
+    // printf("Memory usage is: %.2f%s/%.2f%s %.2f%%\n", 
+    //         struct_used.conv_val, 
+    //         struct_used.unit_conv, 
+    //         struct_total.conv_val, 
+    //         struct_total.unit_conv, 
+    //         MemUsage); 
 }
 
 ValConv readable_values(unsigned long value) {
@@ -227,38 +248,42 @@ ValConv readable_values(unsigned long value) {
     return s1;
 }
 
-void disk_usage(void) {
-    disk_usage_calc("/");
-    disk_usage_calc("/mnt/sdb1");
-}
+// void disk_usage(char *path, Big_data *bd) {
+//     disk_usage_calc("/", bd);
+//     disk_usage_calc("/mnt/sdb1", bd);
+// }
 
-int disk_usage_calc(char *path) {
+int disk_usage_calc(char *path, Big_data *bd, DiskStats disks[]) {
     struct statvfs stat;  
 
-    if (statvfs(path, &stat) !=0) {
+    if (statvfs(path, &stat) != 0) {
         return -1;
     } 
 
-    double usage;
-    unsigned long free;
-    unsigned long total;
-    unsigned long used;
+    // double usage;
+    // unsigned long free;
+    // unsigned long total;
+    // unsigned long used;
 
     if (strcmp(path, "/") == 0) {
-        free = stat.f_bfree*stat.f_frsize;
+        strcpy(disks[0].path, "/");
+        disks[0].disc_free = stat.f_bfree*stat.f_frsize;
+        disks[0].disc_total = stat.f_blocks*stat.f_frsize;
     }
     else {
-        free = stat.f_bavail*stat.f_frsize;
+        strcpy(disks[1].path, "/mnt/sdb1");
+        disks[1].disc_free = stat.f_bavail*stat.f_frsize;
+        disks[1].disc_total = stat.f_blocks*stat.f_frsize;
+
     }
-    total = stat.f_blocks*stat.f_frsize;
-    used = total - free;
-    usage = ((double)used/(double)total)*100;
+    // disks[0].disc_total = stat.f_blocks*stat.f_frsize;
+    // disks[1].disc_total = disks[0].disc_total;
 
-
-    ValConv struct_used = readable_values(used/1024);
-    ValConv struct_total = readable_values(total/1024);
-    
-    printf("%s  %.2f%s/%.2f%s %.2f%%\n", path, struct_used.conv_val, struct_used.unit_conv, struct_total.conv_val, struct_total.unit_conv, usage);
+    // used = total - free;
+    // usage = ((double)used/(double)total)*100;
+    // ValConv struct_used = readable_values(used/1024);
+    // ValConv struct_total = readable_values(total/1024);    
+    // printf("%s  %.2f%s/%.2f%s %.2f%%\n", path, struct_used.conv_val, struct_used.unit_conv, struct_total.conv_val, struct_total.unit_conv, usage);
 
     return 0;
 }
@@ -511,4 +536,59 @@ void print_proc_stats(Process *snap, int n, unsigned long MemTotal) {
                     snap[i].state, 
                     snap[i].proc_cpu_usage));
     }
+}
+
+void collecting_data(Big_data *bd, unsigned long *MemTotal, DiskStats disks[]) {
+    cpu_usage_calc(bd);
+    read_meminfo(bd, MemTotal);
+    disk_usage_calc("/", bd, disks);
+    disk_usage_calc("/mnt/sdb1", bd, disks);
+    // ntwrk_spd_calc();    
+}
+
+void printing_data(Big_data *bd, unsigned long MemTotal, DiskStats disks[]) {
+    printf("CPU usage is: %.2f%%\n", bd->cpu_usage);
+    
+    unsigned long MemUsed = 0;
+    float MemUsage = 0;
+    MemUsage = (((double)(MemTotal) - (double)(bd->MemAvailable))/(double)(MemTotal))*100;
+    MemUsed = MemTotal - bd->MemAvailable;
+    ValConv struct_used_mem = readable_values(MemUsed*1024);
+    ValConv struct_total_mem = readable_values(MemTotal*1024);
+    printf("Memory usage is: %.2f%s/%.2f%s %.2f%%\n", 
+            struct_used_mem.conv_val, 
+            struct_used_mem.unit_conv, 
+            struct_total_mem.conv_val, 
+            struct_total_mem.unit_conv, 
+            MemUsage); 
+
+    double usage;
+    unsigned long used;
+    for (int i = 0; i < NUM_DISKS; i++) {
+        // used = bd->disc_total - bd->disc_free;
+        used = disks[i].disc_total - disks[i].disc_free;
+        // usage = ((double)used/(double)bd->disc_total)*100;
+        usage = ((double)used/(double)disks[i].disc_total)*100;
+        ValConv struct_used_disck = readable_values(used/1024);
+        ValConv struct_total_disk = readable_values(disks[i].disc_total/1024);    
+        printf("%s %.2f%s/%.2f%s %.2f%%\n", 
+                disks[i].path, 
+                struct_used_disck.conv_val, 
+                struct_used_disck.unit_conv, 
+                struct_total_disk.conv_val, 
+                struct_total_disk.unit_conv, 
+                usage);
+    }
+    // used = bd->disc_total - bd->disc_free;
+    // usage = ((double)used/(double)bd->disc_total)*100;
+    // ValConv struct_used_disck = readable_values(used/1024);
+    // ValConv struct_total_disk = readable_values(bd->disc_total/1024);    
+    // printf("  %.2f%s/%.2f%s %.2f%%\n", 
+    //         // path, 
+    //         struct_used_disck.conv_val, 
+    //         struct_used_disck.unit_conv, 
+    //         struct_total_disk.conv_val, 
+    //         struct_total_disk.unit_conv, 
+    //         usage);
+
 }
