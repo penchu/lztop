@@ -261,8 +261,8 @@ int disk_usage_calc(char *path, Big_data *bd, DiskStats disks[]) {
     } 
 
     // double usage;
-    // unsigned long free;
-    // unsigned long total;
+    unsigned long free;
+    unsigned long total;
     // unsigned long used;
 
     if (strcmp(path, "/") == 0) {
@@ -274,7 +274,6 @@ int disk_usage_calc(char *path, Big_data *bd, DiskStats disks[]) {
         strcpy(disks[1].path, "/mnt/sdb1");
         disks[1].disc_free = stat.f_bavail*stat.f_frsize;
         disks[1].disc_total = stat.f_blocks*stat.f_frsize;
-
     }
     // disks[0].disc_total = stat.f_blocks*stat.f_frsize;
     // disks[1].disc_total = disks[0].disc_total;
@@ -284,6 +283,12 @@ int disk_usage_calc(char *path, Big_data *bd, DiskStats disks[]) {
     // ValConv struct_used = readable_values(used/1024);
     // ValConv struct_total = readable_values(total/1024);    
     // printf("%s  %.2f%s/%.2f%s %.2f%%\n", path, struct_used.conv_val, struct_used.unit_conv, struct_total.conv_val, struct_total.unit_conv, usage);
+    
+    // printf("free: %ld, total: %ld\n", disks[0].disc_free, disks[0].disc_total);
+    // free = stat.f_bfree*stat.f_frsize;
+    // total = stat.f_blocks*stat.f_frsize;
+    // ValConv struct_total = readable_values(total);
+    // printf("total: %ld, converted: %.2f%s\n", total, struct_total.conv_val, struct_total.unit_conv);
 
     return 0;
 }
@@ -569,8 +574,8 @@ void printing_data(Big_data *bd, unsigned long MemTotal, DiskStats disks[]) {
         used = disks[i].disc_total - disks[i].disc_free;
         // usage = ((double)used/(double)bd->disc_total)*100;
         usage = ((double)used/(double)disks[i].disc_total)*100;
-        ValConv struct_used_disck = readable_values(used/1024);
-        ValConv struct_total_disk = readable_values(disks[i].disc_total/1024);    
+        ValConv struct_used_disck = readable_values(used);
+        ValConv struct_total_disk = readable_values(disks[i].disc_total);    
         printf("%s %.2f%s/%.2f%s %.2f%%\n", 
                 disks[i].path, 
                 struct_used_disck.conv_val, 
@@ -579,16 +584,4 @@ void printing_data(Big_data *bd, unsigned long MemTotal, DiskStats disks[]) {
                 struct_total_disk.unit_conv, 
                 usage);
     }
-    // used = bd->disc_total - bd->disc_free;
-    // usage = ((double)used/(double)bd->disc_total)*100;
-    // ValConv struct_used_disck = readable_values(used/1024);
-    // ValConv struct_total_disk = readable_values(bd->disc_total/1024);    
-    // printf("  %.2f%s/%.2f%s %.2f%%\n", 
-    //         // path, 
-    //         struct_used_disck.conv_val, 
-    //         struct_used_disck.unit_conv, 
-    //         struct_total_disk.conv_val, 
-    //         struct_total_disk.unit_conv, 
-    //         usage);
-
 }
