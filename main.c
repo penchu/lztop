@@ -88,6 +88,7 @@ int main(void) {
         collecting_data(&bd, &MemTotal, disks, snapshots, proc_snps);
         printf("---------------------------------------\n");
         printing_data(&bd, MemTotal, disks, snapshots, proc_snps);
+        // print_proc_stats(proc_snps[1], MemTotal);
         printf("---------------------------------------\n");
 
         fflush(stdout);
@@ -272,7 +273,10 @@ int processes_list(unsigned long MemTotal, Process proc_snps[][MAX_PROCS]) {
     
     // Process snap1[MAX_PROCS];
     // int n = take_proc_snapshot(snap1, MAX_PROCS);   
-    take_proc_snapshot(proc_snps[0]);
+    proc_snps[0]->n = take_proc_snapshot(proc_snps[0]);
+    // for (int i = 0; i < 5; i++) {
+    //     printf("name: %s\n", proc_snps[0]->name);
+    // }
 
     sort_procs(proc_snps[0], proc_snps[0]->n, compare_sort);
     
@@ -284,20 +288,22 @@ int processes_list(unsigned long MemTotal, Process proc_snps[][MAX_PROCS]) {
     double elapsed = interval.tv_sec + interval.tv_nsec / 1e9;
     
     // Process snap2[MAX_PROCS];
-    take_proc_snapshot(proc_snps[1]);
+    proc_snps[1]->n = take_proc_snapshot(proc_snps[1]);
 
     Process *item;
     
     for (int i = 0; i < proc_snps[1]->n; i++) {
         pid_t key = proc_snps[1][i].pid;
-        item = bsearch(&key, proc_snps[0], proc_snps[1]->n, sizeof(proc_snps[0][0]), compare_search);
-        proc_snps[1][i].proc_cpu_usage = ((proc_snps[1][i].utime + proc_snps[1][i].stime) - (item->utime + item->stime))/(elapsed*ticks)*100;
+        item = bsearch(&key, proc_snps[0], proc_snps[0]->n, sizeof(proc_snps[0][0]), compare_search);
+        if (item != NULL) {
+            proc_snps[1][i].proc_cpu_usage = ((proc_snps[1][i].utime + proc_snps[1][i].stime) - (item->utime + item->stime))/(elapsed*ticks)*100;
+        }        
     }
 
     sort_procs(proc_snps[1], proc_snps[1]->n, compare_sort_cpu);
 
     // print_proc_stats(proc_snps[1], proc_snps[1]->n, MemTotal);
-    // memset(&proc_snps[0], 0, sizeof(proc_snps[0]));
+    memset(&proc_snps[0], 0, sizeof(proc_snps[0]));
     // memset(&proc_snps[1], 0, sizeof(proc_snps[1]));
 
     return 0;
@@ -321,8 +327,10 @@ int take_proc_snapshot(Process proc_snps[]) {
 
     while ((pDirent = readdir(pDir)) != NULL) {
         if (isdigit(pDirent->d_name[0])) {
+            
             proc_snps[n].pid = atoi(pDirent->d_name);
-
+            // printf("pid: %d ", proc_snps[n].pid);
+            // printf("\n");
             snprintf(path_pid, 300, "/proc/%s/status", pDirent->d_name);            
             fptr = fopen(path_pid, "r");
             char *p = NULL;
@@ -423,6 +431,7 @@ int compare_search(const void* a, const void* b) {
 
 void print_proc_stats(Process *snap, unsigned long MemTotal) {
     for (int i = (snap->n)-1; i >= ((snap->n)-5); i--) {
+    // for (int i = 0; i < 5; i++) {
         if (snap[i].vsize > 0) {
             ValConv struct_vsize = readable_values(snap[i].vsize*1024);
             ValConv struct_rss = readable_values(snap[i].rss*1024);
@@ -444,8 +453,8 @@ void print_proc_stats(Process *snap, unsigned long MemTotal) {
                     snap[i].state, 
                     snap[i].proc_cpu_usage));
     }
-    memset(&snap[0], 0, sizeof(snap[0]));
-    memset(&snap[1], 0, sizeof(snap[1]));
+    // memset(&snap[0], 0, sizeof(snap[0]));
+    // memset(&snap[1], 0, sizeof(snap[1]));
 }
 
 void collecting_data(Big_data *bd, unsigned long *MemTotal, DiskStats disks[], Speed snapshots[], Process proc_snps[][MAX_PROCS]) {
@@ -508,9 +517,9 @@ void printing_data(Big_data *bd, unsigned long MemTotal, DiskStats disks[], Spee
             rx_r_conv.unit_conv, 
             tx_r_conv.conv_val, 
             tx_r_conv.unit_conv); 
-
+    printf("\n");
     print_proc_stats(proc_snps[1], MemTotal);
     // memset(&proc_snps[0], 0, sizeof(proc_snps[0]));
-    // memset(&proc_snps[1], 0, sizeof(proc_snps[1]));
+    memset(&proc_snps[1], 0, sizeof(proc_snps[1]));
 
 }
