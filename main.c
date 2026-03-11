@@ -31,7 +31,8 @@ typedef struct {
    char name[17];
    char state;
    int rss;
-   int vsize;
+//    int vsize;
+   unsigned long vsize;
    int proc_cpu_usage;
    int utime;
    int stime;
@@ -326,11 +327,8 @@ int take_proc_snapshot(Process proc_snps[]) {
     char buff[128] = {0};
 
     while ((pDirent = readdir(pDir)) != NULL) {
-        if (isdigit(pDirent->d_name[0])) {
-            
+        if (isdigit(pDirent->d_name[0])) {            
             proc_snps[n].pid = atoi(pDirent->d_name);
-            // printf("pid: %d ", proc_snps[n].pid);
-            // printf("\n");
             snprintf(path_pid, 300, "/proc/%s/status", pDirent->d_name);            
             fptr = fopen(path_pid, "r");
             char *p = NULL;
@@ -344,7 +342,7 @@ int take_proc_snapshot(Process proc_snps[]) {
                     proc_snps[n].state = buff[7];
                 }
                 if (strncmp("VmSize", buff, 6) == 0) {
-                    sscanf(buff, "VmSize: %d", &proc_snps[n].vsize);
+                    sscanf(buff, "VmSize: %ld", &proc_snps[n].vsize);
                 }
                 if (strncmp("VmRSS", buff, 5) == 0) {
                     sscanf(buff, "VmRSS: %d", &proc_snps[n].rss);
@@ -429,9 +427,11 @@ int compare_search(const void* a, const void* b) {
     return 0;
 }
 
-void print_proc_stats(Process *snap, unsigned long MemTotal) {
+void print_proc_stats(Process *snap, unsigned long MemTotal) {  
     for (int i = (snap->n)-1; i >= ((snap->n)-5); i--) {
-    // for (int i = 0; i < 5; i++) {
+        // if (strcmp(snap[i].name, "597515") > 0) {
+        //     printf("vsize: %d\n", snap[i].vsize);
+        // }
         if (snap[i].vsize > 0) {
             ValConv struct_vsize = readable_values(snap[i].vsize*1024);
             ValConv struct_rss = readable_values(snap[i].rss*1024);
@@ -440,10 +440,10 @@ void print_proc_stats(Process *snap, unsigned long MemTotal) {
                     snap[i].pid, 
                     snap[i].name, 
                     snap[i].state,
-                    struct_vsize.conv_val, 
-                    struct_vsize.unit_conv, 
                     struct_rss.conv_val, 
                     struct_rss.unit_conv, 
+                    struct_vsize.conv_val, 
+                    struct_vsize.unit_conv, 
                     snap[i].proc_cpu_usage,
                     mem_usage);
         }
